@@ -1,8 +1,8 @@
-# ReviewLoop
+# Vouchly
 
 Universal review automation for local businesses.
 
-ReviewLoop is a separate product from SkinSignal. It is designed for general stores, hospitals, clinics, textile shops, barbers, hotels, car services, mobile shops, restaurants, salons, gyms, coaching classes, and other local businesses.
+Vouchly is a separate product from SkinSignal. It is designed for general stores, hospitals, clinics, textile shops, barbers, hotels, car services, mobile shops, restaurants, salons, gyms, coaching classes, and other local businesses.
 
 ## What is ready
 

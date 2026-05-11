@@ -93,7 +93,7 @@ const defaultState = {
   ]
 };
 
-const storageKey = "reviewloop-universal-state-v1";
+const storageKey = "vouchly-universal-state-v1";
 let state = loadState();
 
 function loadState() {
@@ -187,7 +187,7 @@ function exportData() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "reviewloop-data.json";
+  anchor.download = "vouchly-data.json";
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -199,8 +199,8 @@ function render() {
         <div class="brand">
           <span class="brand-mark">R</span>
           <div>
-            <strong>ReviewLoop</strong>
-            <small>Universal Review Console</small>
+            <strong>Vouchly</strong>
+            <small>Review Growth Console</small>
           </div>
         </div>
         ${navButton("dashboard", "Dashboard")}
