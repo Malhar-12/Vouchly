@@ -30,6 +30,62 @@ select {
   font: inherit;
 }
 
+.auth-page {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(18, 107, 104, 0.14), transparent 42%),
+    var(--bg);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-width: 460px;
+  padding: 34px;
+  width: 100%;
+}
+
+.auth-card h1 {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+}
+
+.auth-card p {
+  color: var(--muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.auth-message {
+  background: #fff2df;
+  border: 1px solid #f4cf9f;
+  border-radius: 8px;
+  color: #8a4a0b;
+  font-weight: 700;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.link-button {
+  background: transparent;
+  border: 0;
+  color: var(--brand);
+  cursor: pointer;
+  font-weight: 800;
+  margin-top: 18px;
+  padding: 0;
+}
+
 .shell {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -144,6 +200,17 @@ h2 {
   gap: 10px;
 }
 
+.account-pill {
+  align-items: center;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: inline-flex;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
 .primary-button,
 .ghost-button,
 .danger-button {
@@ -216,6 +283,22 @@ h2 {
   display: grid;
   gap: 22px;
   grid-template-columns: 1fr 1fr;
+}
+
+.sync-banner {
+  align-items: center;
+  background: #e8f4f1;
+  border: 1px solid #b7dcd6;
+  border-radius: 8px;
+  color: var(--brand-strong);
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+}
+
+.sync-banner span {
+  color: var(--muted);
 }
 
 .panel {

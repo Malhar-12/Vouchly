@@ -1,3 +1,6 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.104.1";
+import { supabaseAnonKey, supabaseUrl } from "./supabase-config.js";
+
 const businessTypes = [
   "General Store",
   "Hospital",
@@ -47,16 +50,6 @@ const defaultState = {
       visitDate: "2026-05-09",
       status: "sent",
       source: "service"
-    },
-    {
-      id: 3,
-      name: "Aisha Khan",
-      phone: "",
-      email: "aisha@example.com",
-      channel: "email",
-      visitDate: "2026-05-08",
-      status: "reviewed",
-      source: "online"
     }
   ],
   tasks: [
@@ -66,14 +59,6 @@ const defaultState = {
       customerName: "Priya Sharma",
       channel: "whatsapp",
       dueAt: "2026-05-11 11:00",
-      status: "scheduled"
-    },
-    {
-      id: 12,
-      title: "Second reminder",
-      customerName: "Rahul Mehta",
-      channel: "sms",
-      dueAt: "2026-05-12 16:00",
       status: "scheduled"
     }
   ],
@@ -93,34 +78,172 @@ const defaultState = {
   ]
 };
 
-const storageKey = "vouchly-universal-state-v1";
-let state = loadState();
+const storageKey = "vouchly-universal-state-v2";
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
 
-function loadState() {
+let state = loadLocalState();
+let session = null;
+let loading = true;
+let authMode = "signin";
+let authMessage = "";
+let syncStatus = "Starting";
+let syncMessage = "Checking account...";
+let saveTimer = null;
+
+function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
   if (!stored) {
     return structuredClone(defaultState);
   }
 
   try {
-    return { ...structuredClone(defaultState), ...JSON.parse(stored) };
+    return mergeState(JSON.parse(stored));
   } catch {
     return structuredClone(defaultState);
   }
 }
 
-function saveState() {
+function mergeState(nextState = {}) {
+  return {
+    ...structuredClone(defaultState),
+    ...nextState,
+    business: {
+      ...defaultState.business,
+      ...(nextState.business ?? {})
+    },
+    customers: nextState.customers ?? defaultState.customers,
+    tasks: nextState.tasks ?? defaultState.tasks,
+    templates: nextState.templates ?? defaultState.templates
+  };
+}
+
+function saveLocalState() {
   window.localStorage.setItem(storageKey, JSON.stringify(state));
 }
 
-function setState(updater) {
+function setState(updater, options = {}) {
   state = typeof updater === "function" ? updater(state) : updater;
-  saveState();
+  saveLocalState();
+  render();
+
+  if (!options.skipRemote) {
+    scheduleRemoteSave();
+  }
+}
+
+function scheduleRemoteSave() {
+  if (!session?.user) {
+    return;
+  }
+
+  window.clearTimeout(saveTimer);
+  syncStatus = "Saving";
+  syncMessage = "Saving workspace...";
+  render();
+
+  saveTimer = window.setTimeout(async () => {
+    await saveRemoteState();
+  }, 450);
+}
+
+async function saveRemoteState() {
+  if (!session?.user) {
+    return;
+  }
+
+  const { error } = await supabase.from("vouchly_workspaces").upsert({
+    user_id: session.user.id,
+    state,
+    updated_at: new Date().toISOString()
+  });
+
+  if (error) {
+    syncStatus = "Local only";
+    syncMessage = error.message;
+  } else {
+    syncStatus = "Cloud synced";
+    syncMessage = `Private workspace for ${session.user.email}`;
+  }
+
   render();
 }
 
+async function loadRemoteState() {
+  if (!session?.user) {
+    return;
+  }
+
+  syncStatus = "Loading";
+  syncMessage = "Loading private workspace...";
+  render();
+
+  const { data, error } = await supabase
+    .from("vouchly_workspaces")
+    .select("state")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error) {
+    syncStatus = "Local only";
+    syncMessage = error.message;
+    render();
+    return;
+  }
+
+  if (data?.state) {
+    setState(mergeState(data.state), { skipRemote: true });
+    syncStatus = "Cloud synced";
+    syncMessage = `Private workspace for ${session.user.email}`;
+    render();
+    return;
+  }
+
+  await saveRemoteState();
+}
+
+async function init() {
+  const { data } = await supabase.auth.getSession();
+  session = data.session;
+  loading = false;
+
+  supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    session = nextSession;
+    authMessage = "";
+
+    if (session?.user) {
+      await loadRemoteState();
+    } else {
+      syncStatus = "Signed out";
+      syncMessage = "Sign in to use cloud sync.";
+      render();
+    }
+  });
+
+  if (session?.user) {
+    await loadRemoteState();
+  } else {
+    syncStatus = "Signed out";
+    syncMessage = "Sign in to create your workspace.";
+    render();
+  }
+}
+
 function nextId(collection) {
-  return collection.length ? Math.max(...collection.map((item) => item.id)) + 1 : Date.now();
+  return collection.length ? Math.max(...collection.map((item) => Number(item.id))) + 1 : Date.now();
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function completionRate() {
@@ -171,14 +294,15 @@ function queueReviewRequest(customerId) {
 }
 
 function deleteCustomer(customerId) {
-  setState((current) => ({
-    ...current,
-    customers: current.customers.filter((customer) => customer.id !== customerId),
-    tasks: current.tasks.filter((task) => {
-      const customer = current.customers.find((entry) => entry.id === customerId);
-      return !customer || task.customerName !== customer.name;
-    })
-  }));
+  setState((current) => {
+    const customer = current.customers.find((entry) => entry.id === customerId);
+
+    return {
+      ...current,
+      customers: current.customers.filter((entry) => entry.id !== customerId),
+      tasks: current.tasks.filter((task) => !customer || task.customerName !== customer.name)
+    };
+  });
 }
 
 function exportData() {
@@ -193,11 +317,24 @@ function exportData() {
 }
 
 function render() {
-  document.querySelector("#app").innerHTML = `
+  const app = document.querySelector("#app");
+
+  if (loading) {
+    app.innerHTML = `<main class="auth-page"><section class="auth-card"><h1>Vouchly</h1><p>Loading workspace...</p></section></main>`;
+    return;
+  }
+
+  if (!session?.user) {
+    app.innerHTML = renderAuth();
+    bindAuthEvents();
+    return;
+  }
+
+  app.innerHTML = `
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <span class="brand-mark">R</span>
+          <span class="brand-mark">V</span>
           <div>
             <strong>Vouchly</strong>
             <small>Review Growth Console</small>
@@ -210,18 +347,52 @@ function render() {
         ${navButton("settings", "Settings")}
         <div class="business-card">
           <small>Business</small>
-          <strong>${state.business.name}</strong>
-          <span>${state.business.type} · ${state.business.city}</span>
+          <strong>${escapeHtml(state.business.name)}</strong>
+          <span>${escapeHtml(state.business.type)} - ${escapeHtml(state.business.city)}</span>
+          <span>${escapeHtml(syncStatus)}</span>
         </div>
       </aside>
       <main class="main">
         ${renderHeader()}
+        ${renderSyncBanner()}
         ${renderView()}
       </main>
     </div>
   `;
 
   bindEvents();
+}
+
+function renderAuth() {
+  const isSignup = authMode === "signup";
+
+  return `
+    <main class="auth-page">
+      <section class="auth-card">
+        <p class="eyebrow">Vouchly</p>
+        <h1>${isSignup ? "Create business access" : "Sign in to Vouchly"}</h1>
+        <p>${isSignup ? "Start a private review workspace for your business." : "Open your saved customer and automation workspace."}</p>
+        <form id="auth-form" class="auth-form">
+          <input name="email" type="email" placeholder="Email" required />
+          <input name="password" type="password" placeholder="Password" required minlength="6" />
+          <button class="primary-button" type="submit">${isSignup ? "Create account" : "Sign in"}</button>
+        </form>
+        ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
+        <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
+          ${isSignup ? "Already have an account? Sign in" : "New business? Create account"}
+        </button>
+      </section>
+    </main>
+  `;
+}
+
+function renderSyncBanner() {
+  return `
+    <div class="sync-banner">
+      <strong>${escapeHtml(syncStatus)}</strong>
+      <span>${escapeHtml(syncMessage)}</span>
+    </div>
+  `;
 }
 
 function navButton(view, label) {
@@ -232,11 +403,13 @@ function renderHeader() {
   return `
     <header class="topbar">
       <div>
-        <p class="eyebrow">${state.business.type}</p>
-        <h1>${state.business.name}</h1>
+        <p class="eyebrow">${escapeHtml(state.business.type)}</p>
+        <h1>${escapeHtml(state.business.name)}</h1>
       </div>
       <div class="top-actions">
+        <span class="account-pill">${escapeHtml(session.user.email)}</span>
         <button class="ghost-button" data-action="export">Export</button>
+        <button class="ghost-button" data-action="logout">Logout</button>
         <button class="primary-button" data-action="bulk-send">Send requests</button>
       </div>
     </header>
@@ -290,9 +463,9 @@ function renderDashboard() {
 function metricCard(label, value, detail) {
   return `
     <article class="metric">
-      <span>${label}</span>
-      <strong>${value}</strong>
-      <small>${detail}</small>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
     </article>
   `;
 }
@@ -347,11 +520,11 @@ function customerRows(customers) {
             .map(
               (customer) => `
                 <tr>
-                  <td>${customer.name}</td>
-                  <td>${customer.phone || customer.email || "Missing"}</td>
-                  <td>${customer.channel}</td>
-                  <td>${customer.visitDate}</td>
-                  <td><span class="status ${customer.status}">${customer.status}</span></td>
+                  <td>${escapeHtml(customer.name)}</td>
+                  <td>${escapeHtml(customer.phone || customer.email || "Missing")}</td>
+                  <td>${escapeHtml(customer.channel)}</td>
+                  <td>${escapeHtml(customer.visitDate)}</td>
+                  <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(customer.status)}</span></td>
                   <td class="row-actions">
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview</button>
                     <button class="ghost-button small" data-action="queue" data-id="${customer.id}">Queue</button>
@@ -404,11 +577,11 @@ function taskRows(tasks) {
             .map(
               (task) => `
                 <tr>
-                  <td>${task.title}</td>
-                  <td>${task.customerName}</td>
-                  <td>${task.channel}</td>
-                  <td>${task.dueAt}</td>
-                  <td><span class="status ${task.status}">${task.status}</span></td>
+                  <td>${escapeHtml(task.title)}</td>
+                  <td>${escapeHtml(task.customerName)}</td>
+                  <td>${escapeHtml(task.channel)}</td>
+                  <td>${escapeHtml(task.dueAt)}</td>
+                  <td><span class="status ${escapeHtml(task.status)}">${escapeHtml(task.status)}</span></td>
                   <td>
                     <button class="ghost-button small" data-action="complete-task" data-id="${task.id}">
                       ${task.status === "done" ? "Done" : "Mark done"}
@@ -438,9 +611,9 @@ function renderTemplates() {
           .map(
             (template) => `
               <article class="template-card">
-                <span>${template.channel}</span>
-                <h3>${template.name}</h3>
-                <p>${template.text}</p>
+                <span>${escapeHtml(template.channel)}</span>
+                <h3>${escapeHtml(template.name)}</h3>
+                <p>${escapeHtml(template.text)}</p>
               </article>
             `
           )
@@ -462,7 +635,7 @@ function renderSettings() {
       <form class="settings-form" id="settings-form">
         <label>
           Business name
-          <input name="name" value="${state.business.name}" />
+          <input name="name" value="${escapeHtml(state.business.name)}" />
         </label>
         <label>
           Business type
@@ -470,31 +643,67 @@ function renderSettings() {
             ${businessTypes
               .map(
                 (type) =>
-                  `<option value="${type}" ${state.business.type === type ? "selected" : ""}>${type}</option>`
+                  `<option value="${escapeHtml(type)}" ${state.business.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`
               )
               .join("")}
           </select>
         </label>
         <label>
           Owner
-          <input name="owner" value="${state.business.owner}" />
+          <input name="owner" value="${escapeHtml(state.business.owner)}" />
         </label>
         <label>
           City
-          <input name="city" value="${state.business.city}" />
+          <input name="city" value="${escapeHtml(state.business.city)}" />
         </label>
         <label class="wide">
           Google review link
-          <input name="googleReviewLink" value="${state.business.googleReviewLink}" placeholder="https://g.page/r/..." />
+          <input name="googleReviewLink" value="${escapeHtml(state.business.googleReviewLink)}" placeholder="https://g.page/r/..." />
         </label>
         <label class="wide">
           Sender name
-          <input name="senderName" value="${state.business.senderName}" />
+          <input name="senderName" value="${escapeHtml(state.business.senderName)}" />
         </label>
         <button class="primary-button" type="submit">Save settings</button>
       </form>
     </section>
   `;
+}
+
+function bindAuthEvents() {
+  document.querySelector("#auth-form")?.addEventListener("submit", submitAuth);
+  document.querySelector("[data-auth-mode]")?.addEventListener("click", (event) => {
+    authMode = event.currentTarget.dataset.authMode;
+    authMessage = "";
+    render();
+  });
+}
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const { email, password } = Object.fromEntries(new FormData(event.currentTarget).entries());
+  authMessage = authMode === "signup" ? "Creating account..." : "Signing in...";
+  render();
+
+  const response =
+    authMode === "signup"
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password });
+
+  if (response.error) {
+    authMessage = response.error.message;
+    render();
+    return;
+  }
+
+  if (authMode === "signup" && !response.data.session) {
+    authMessage = "Account created. Check email if confirmation is enabled, then sign in.";
+    authMode = "signin";
+    render();
+    return;
+  }
+
+  authMessage = "";
 }
 
 function bindEvents() {
@@ -515,6 +724,7 @@ function bindEvents() {
       if (action === "delete-customer") deleteCustomer(id);
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id);
+      if (action === "logout") logout();
     });
   });
 
@@ -595,4 +805,9 @@ function previewMessage(customerId) {
   window.alert(buildMessage(customer));
 }
 
+async function logout() {
+  await supabase.auth.signOut();
+}
+
 render();
+init();

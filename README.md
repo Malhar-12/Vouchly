@@ -6,6 +6,8 @@ Vouchly is a separate product from SkinSignal. It is designed for general stores
 
 ## What is ready
 
+- Supabase email login and signup
+- Private cloud workspace per business owner
 - Business profile setup
 - Business type selector
 - Customer list with phone, email, channel, and visit date
@@ -14,7 +16,7 @@ Vouchly is a separate product from SkinSignal. It is designed for general stores
 - Message templates
 - Customer delete control
 - Data export
-- Local browser persistence
+- Local backup persistence
 
 ## Render deploy
 
@@ -28,10 +30,14 @@ Publish Directory: .
 
 This first version is static and does not require a build command.
 
+## Supabase setup
+
+Run `supabase-schema.sql` in the Supabase SQL Editor before using the live app.
+
+The app stores each signed-in user's workspace in `vouchly_workspaces` with row-level security enabled.
+
 ## Next production steps
 
-- Create a separate GitHub repo for this app
-- Add Supabase auth and database
 - Add business-owned sender connections
 - Add real WhatsApp/SMS/email provider integration
 - Add billing and plan limits
