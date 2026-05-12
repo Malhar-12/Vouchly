@@ -28,7 +28,8 @@ const defaultState = {
     owner: "Business Owner",
     city: "Bangalore",
     googleReviewLink: "",
-    senderName: "Bright Local Services"
+    senderName: "Bright Local Services",
+    setupComplete: false
   },
   customers: [
     {
@@ -255,6 +256,17 @@ function completionRate() {
   return Math.round((reviewed / state.customers.length) * 100);
 }
 
+function isSetupComplete() {
+  return Boolean(
+    state.business.setupComplete &&
+      state.business.name?.trim() &&
+      state.business.type?.trim() &&
+      state.business.owner?.trim() &&
+      state.business.city?.trim() &&
+      state.business.googleReviewLink?.trim()
+  );
+}
+
 function buildMessage(customer) {
   const template =
     state.templates.find((item) => item.channel === customer.channel) ?? state.templates[0];
@@ -330,6 +342,8 @@ function render() {
     return;
   }
 
+  const setupComplete = isSetupComplete();
+
   app.innerHTML = `
     <div class="shell">
       <aside class="sidebar">
@@ -340,11 +354,11 @@ function render() {
             <small>Review Growth Console</small>
           </div>
         </div>
-        ${navButton("dashboard", "Dashboard")}
-        ${navButton("customers", "Customers")}
-        ${navButton("automations", "Automations")}
-        ${navButton("templates", "Templates")}
-        ${navButton("settings", "Settings")}
+        ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
+        ${setupComplete ? navButton("customers", "Customers") : ""}
+        ${setupComplete ? navButton("automations", "Automations") : ""}
+        ${setupComplete ? navButton("templates", "Templates") : ""}
+        ${navButton("settings", setupComplete ? "Settings" : "Setup")}
         <div class="business-card">
           <small>Business</small>
           <strong>${escapeHtml(state.business.name)}</strong>
@@ -355,7 +369,7 @@ function render() {
       <main class="main">
         ${renderHeader()}
         ${renderSyncBanner()}
-        ${renderView()}
+        ${setupComplete ? renderView() : renderOnboarding()}
       </main>
     </div>
   `;
@@ -369,9 +383,15 @@ function renderAuth() {
   return `
     <main class="auth-page">
       <section class="auth-card">
-        <p class="eyebrow">Vouchly</p>
-        <h1>${isSignup ? "Create business access" : "Sign in to Vouchly"}</h1>
-        <p>${isSignup ? "Start a private review workspace for your business." : "Open your saved customer and automation workspace."}</p>
+        <div class="auth-brand">
+          <span class="brand-mark">V</span>
+          <div>
+            <p class="eyebrow">Vouchly</p>
+            <strong>Review Growth Console</strong>
+          </div>
+        </div>
+        <h1>${isSignup ? "Start your review engine" : "Welcome back to Vouchly"}</h1>
+        <p>${isSignup ? "Create a private workspace for customers, review links, follow-ups, and templates." : "Open your saved customer and automation workspace."}</p>
         <form id="auth-form" class="auth-form">
           <input name="email" type="email" placeholder="Email" required />
           <input name="password" type="password" placeholder="Password" required minlength="6" />
@@ -381,6 +401,28 @@ function renderAuth() {
         <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
           ${isSignup ? "Already have an account? Sign in" : "New business? Create account"}
         </button>
+      </section>
+      <section class="auth-preview" aria-hidden="true">
+        <div class="preview-top">
+          <span>Today</span>
+          <strong>Review requests</strong>
+        </div>
+        <div class="preview-metric">
+          <strong>42</strong>
+          <span>customers queued</span>
+        </div>
+        <div class="preview-row">
+          <span>WhatsApp follow-up</span>
+          <strong>Ready</strong>
+        </div>
+        <div class="preview-row">
+          <span>Google review link</span>
+          <strong>Attached</strong>
+        </div>
+        <div class="preview-row">
+          <span>Reminder template</span>
+          <strong>Saved</strong>
+        </div>
       </section>
     </main>
   `;
@@ -400,6 +442,8 @@ function navButton(view, label) {
 }
 
 function renderHeader() {
+  const setupComplete = isSetupComplete();
+
   return `
     <header class="topbar">
       <div>
@@ -408,9 +452,9 @@ function renderHeader() {
       </div>
       <div class="top-actions">
         <span class="account-pill">${escapeHtml(session.user.email)}</span>
-        <button class="ghost-button" data-action="export">Export</button>
+        ${setupComplete ? `<button class="ghost-button" data-action="export">Export</button>` : ""}
         <button class="ghost-button" data-action="logout">Logout</button>
-        <button class="primary-button" data-action="bulk-send">Send requests</button>
+        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Send requests</button>` : ""}
       </div>
     </header>
   `;
@@ -422,6 +466,17 @@ function renderView() {
   if (state.activeView === "templates") return renderTemplates();
   if (state.activeView === "settings") return renderSettings();
   return renderDashboard();
+}
+
+function renderOnboarding() {
+  return `
+    <section class="setup-hero">
+      <p class="eyebrow">Business setup</p>
+      <h2>Set up the review workflow before sending requests</h2>
+      <p>Vouchly will use this profile and the templates below when customers receive review requests.</p>
+    </section>
+    ${renderSettings(true)}
+  `;
 }
 
 function renderDashboard() {
@@ -623,13 +678,16 @@ function renderTemplates() {
   `;
 }
 
-function renderSettings() {
+function renderSettings(isOnboarding = false) {
+  const firstTemplate = state.templates[0] ?? defaultState.templates[0];
+  const reminderTemplate = state.templates[1] ?? defaultState.templates[1];
+
   return `
     <section class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Settings</p>
-          <h2>Business profile</h2>
+          <p class="eyebrow">${isOnboarding ? "Step 1" : "Settings"}</p>
+          <h2>${isOnboarding ? "Business profile and messages" : "Business profile"}</h2>
         </div>
       </div>
       <form class="settings-form" id="settings-form">
@@ -664,7 +722,18 @@ function renderSettings() {
           Sender name
           <input name="senderName" value="${escapeHtml(state.business.senderName)}" />
         </label>
-        <button class="primary-button" type="submit">Save settings</button>
+        <label class="wide">
+          First review request message
+          <textarea name="firstTemplate" rows="4">${escapeHtml(firstTemplate.text)}</textarea>
+        </label>
+        <label class="wide">
+          Reminder message
+          <textarea name="reminderTemplate" rows="4">${escapeHtml(reminderTemplate.text)}</textarea>
+        </label>
+        <div class="template-help wide">
+          Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>. Vouchly adds the Google review link automatically.
+        </div>
+        <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
       </form>
     </section>
   `;
@@ -763,8 +832,29 @@ function addCustomer(event) {
 
 function saveSettings(event) {
   event.preventDefault();
-  const business = Object.fromEntries(new FormData(event.currentTarget).entries());
-  setState((current) => ({ ...current, business }));
+  const form = Object.fromEntries(new FormData(event.currentTarget).entries());
+  const { firstTemplate, reminderTemplate, ...business } = form;
+
+  setState((current) => ({
+    ...current,
+    activeView: "dashboard",
+    business: {
+      ...current.business,
+      ...business,
+      setupComplete: true
+    },
+    templates: current.templates.map((template, index) => {
+      if (index === 0) {
+        return { ...template, text: firstTemplate };
+      }
+
+      if (index === 1) {
+        return { ...template, text: reminderTemplate };
+      }
+
+      return template;
+    })
+  }));
 }
 
 function bulkQueueRequests() {
