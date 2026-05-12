@@ -406,6 +406,83 @@ h2 {
   gap: 7px;
 }
 
+.field-title {
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.plan-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.plan-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 170px;
+  padding: 16px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.plan-card:hover,
+.plan-card.selected {
+  border-color: var(--brand);
+  box-shadow: 0 12px 28px rgba(18, 107, 104, 0.14);
+  transform: translateY(-1px);
+}
+
+.plan-card input {
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+}
+
+.plan-card span {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.plan-card strong {
+  color: var(--ink);
+  font-size: 1.35rem;
+}
+
+.plan-card small {
+  line-height: 1.4;
+}
+
+.plan-detail {
+  background: var(--soft);
+  border: 1px solid #b7dcd6;
+  border-radius: 8px;
+  color: var(--muted);
+  margin-top: 12px;
+  padding: 16px;
+}
+
+.plan-detail strong,
+.plan-detail span {
+  display: block;
+}
+
+.plan-detail strong {
+  color: var(--brand-strong);
+  margin-bottom: 4px;
+}
+
+.plan-detail ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
 .wide {
   grid-column: 1 / -1;
 }
@@ -550,6 +627,7 @@ th {
   .split-grid,
   .template-grid,
   .settings-form,
+  .plan-grid,
   .auth-page {
     grid-template-columns: 1fr;
   }

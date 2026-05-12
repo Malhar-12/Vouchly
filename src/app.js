@@ -20,6 +20,33 @@ const businessTypes = [
   "Coaching Class"
 ];
 
+const plans = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: "INR 1,999 / month",
+    fit: "For small shops or solo businesses starting review collection.",
+    limits: "Up to 300 customers/month",
+    includes: ["Customer list", "Review request tracking", "CSV data backup"]
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    price: "INR 4,999 / month",
+    fit: "For growing local businesses that need follow-up automation.",
+    limits: "Up to 1,500 customers/month",
+    includes: ["Everything in Starter", "Automation tasks", "Editable message templates", "Lead follow-up"]
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "INR 9,999 / month",
+    fit: "For high-volume teams, multi-location services, and agencies.",
+    limits: "Up to 5,000 customers/month",
+    includes: ["Everything in Growth", "Priority support", "Future multi-user controls", "Advanced reporting"]
+  }
+];
+
 const defaultState = {
   activeView: "dashboard",
   business: {
@@ -29,6 +56,7 @@ const defaultState = {
     city: "Bangalore",
     googleReviewLink: "",
     senderName: "Bright Local Services",
+    plan: "starter",
     setupComplete: false
   },
   customers: [
@@ -274,6 +302,7 @@ function requiredSetupFields(form) {
     ["Business type", form.type],
     ["Owner", form.owner],
     ["City", form.city],
+    ["Subscription plan", form.plan],
     ["Google review link", form.googleReviewLink],
     ["Sender name", form.senderName],
     ["First review request message", form.firstTemplate],
@@ -747,6 +776,7 @@ function renderTemplates() {
 function renderSettings(isOnboarding = false) {
   const firstTemplate = state.templates[0] ?? defaultState.templates[0];
   const reminderTemplate = state.templates[1] ?? defaultState.templates[1];
+  const selectedPlan = plans.find((plan) => plan.id === state.business.plan) ?? plans[0];
 
   return `
     <section class="panel">
@@ -780,6 +810,26 @@ function renderSettings(isOnboarding = false) {
           City
           <input name="city" value="${escapeHtml(state.business.city)}" />
         </label>
+        <div class="wide">
+          <p class="field-title">Subscription plan</p>
+          <div class="plan-grid" role="radiogroup" aria-label="Subscription plan">
+            ${plans
+              .map(
+                (plan) => `
+                  <label class="plan-card ${selectedPlan.id === plan.id ? "selected" : ""}">
+                    <input name="plan" type="radio" value="${escapeHtml(plan.id)}" ${selectedPlan.id === plan.id ? "checked" : ""} />
+                    <span>${escapeHtml(plan.name)}</span>
+                    <strong>${escapeHtml(plan.price)}</strong>
+                    <small>${escapeHtml(plan.fit)}</small>
+                  </label>
+                `
+              )
+              .join("")}
+          </div>
+          <div class="plan-detail" id="plan-detail">
+            ${renderPlanDetail(selectedPlan)}
+          </div>
+        </div>
         <label class="wide">
           Google review link
           <input name="googleReviewLink" value="${escapeHtml(state.business.googleReviewLink)}" placeholder="https://g.page/r/..." />
@@ -803,6 +853,16 @@ function renderSettings(isOnboarding = false) {
         <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
       </form>
     </section>
+  `;
+}
+
+function renderPlanDetail(plan) {
+  return `
+    <strong>${escapeHtml(plan.name)} includes</strong>
+    <span>${escapeHtml(plan.limits)}</span>
+    <ul>
+      ${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
   `;
 }
 
@@ -866,6 +926,19 @@ function bindEvents() {
 
   document.querySelector("#customer-form")?.addEventListener("submit", addCustomer);
   document.querySelector("#settings-form")?.addEventListener("submit", saveSettings);
+  document.querySelectorAll('input[name="plan"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      const selectedPlan = plans.find((plan) => plan.id === input.value) ?? plans[0];
+      document
+        .querySelectorAll(".plan-card")
+        .forEach((card) => card.classList.toggle("selected", card.contains(input)));
+
+      const detail = document.querySelector("#plan-detail");
+      if (detail) {
+        detail.innerHTML = renderPlanDetail(selectedPlan);
+      }
+    });
+  });
 }
 
 function addCustomer(event) {
