@@ -318,14 +318,58 @@ function deleteCustomer(customerId) {
 }
 
 function exportData() {
-  const payload = JSON.stringify({ exportedAt: new Date().toISOString(), ...state }, null, 2);
-  const blob = new Blob([payload], { type: "application/json" });
+  const rows = [
+    ["record_type", "business_name", "business_type", "name", "phone", "email", "channel", "date_or_due", "status", "source_or_message"],
+    [
+      "business",
+      state.business.name,
+      state.business.type,
+      state.business.owner,
+      "",
+      "",
+      state.business.senderName,
+      new Date().toISOString().slice(0, 10),
+      "active",
+      state.business.googleReviewLink
+    ],
+    ...state.customers.map((customer) => [
+      "customer",
+      state.business.name,
+      state.business.type,
+      customer.name,
+      customer.phone,
+      customer.email,
+      customer.channel,
+      customer.visitDate,
+      customer.status,
+      customer.source
+    ]),
+    ...state.tasks.map((task) => [
+      "automation_task",
+      state.business.name,
+      state.business.type,
+      task.customerName,
+      "",
+      "",
+      task.channel,
+      task.dueAt,
+      task.status,
+      task.title
+    ])
+  ];
+
+  const csv = rows.map((row) => row.map(formatCsvCell).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "vouchly-data.json";
+  anchor.download = "vouchly-data-backup.csv";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function formatCsvCell(value = "") {
+  return `"${String(value).replaceAll('"', '""')}"`;
 }
 
 function render() {
@@ -452,7 +496,6 @@ function renderHeader() {
       </div>
       <div class="top-actions">
         <span class="account-pill">${escapeHtml(session.user.email)}</span>
-        ${setupComplete ? `<button class="ghost-button" data-action="export">Export</button>` : ""}
         <button class="ghost-button" data-action="logout">Logout</button>
         ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Send requests</button>` : ""}
       </div>
@@ -733,6 +776,7 @@ function renderSettings(isOnboarding = false) {
         <div class="template-help wide">
           Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>. Vouchly adds the Google review link automatically.
         </div>
+        ${isOnboarding ? "" : `<button class="ghost-button wide" data-action="export" type="button">Download data backup</button>`}
         <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
       </form>
     </section>
