@@ -363,6 +363,16 @@ h2 {
   color: var(--muted);
 }
 
+.app-message {
+  background: #fff2df;
+  border: 1px solid #f4cf9f;
+  border-radius: 8px;
+  color: #8a4a0b;
+  font-weight: 700;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+}
+
 .panel {
   padding: 24px;
 }

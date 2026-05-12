@@ -92,6 +92,7 @@ let session = null;
 let loading = true;
 let authMode = "signin";
 let authMessage = "";
+let appMessage = "";
 let syncStatus = "Starting";
 let syncMessage = "Checking account...";
 let saveTimer = null;
@@ -267,6 +268,19 @@ function isSetupComplete() {
   );
 }
 
+function requiredSetupFields(form) {
+  return [
+    ["Business name", form.name],
+    ["Business type", form.type],
+    ["Owner", form.owner],
+    ["City", form.city],
+    ["Google review link", form.googleReviewLink],
+    ["Sender name", form.senderName],
+    ["First review request message", form.firstTemplate],
+    ["Reminder message", form.reminderTemplate]
+  ].filter(([, value]) => !String(value ?? "").trim());
+}
+
 function buildMessage(customer) {
   const template =
     state.templates.find((item) => item.channel === customer.channel) ?? state.templates[0];
@@ -413,6 +427,7 @@ function render() {
       <main class="main">
         ${renderHeader()}
         ${renderSyncBanner()}
+        ${renderAppMessage()}
         ${setupComplete ? renderView() : renderOnboarding()}
       </main>
     </div>
@@ -479,6 +494,14 @@ function renderSyncBanner() {
       <span>${escapeHtml(syncMessage)}</span>
     </div>
   `;
+}
+
+function renderAppMessage() {
+  if (!appMessage) {
+    return "";
+  }
+
+  return `<div class="app-message">${escapeHtml(appMessage)}</div>`;
 }
 
 function navButton(view, label) {
@@ -878,6 +901,15 @@ function saveSettings(event) {
   event.preventDefault();
   const form = Object.fromEntries(new FormData(event.currentTarget).entries());
   const { firstTemplate, reminderTemplate, ...business } = form;
+  const missingFields = requiredSetupFields(form);
+
+  if (missingFields.length) {
+    appMessage = `Please fill: ${missingFields.map(([label]) => label).join(", ")}.`;
+    render();
+    return;
+  }
+
+  appMessage = "Business setup saved.";
 
   setState((current) => ({
     ...current,
@@ -940,6 +972,14 @@ function previewMessage(customerId) {
 }
 
 async function logout() {
+  window.clearTimeout(saveTimer);
+  session = null;
+  authMessage = "";
+  appMessage = "";
+  syncStatus = "Signed out";
+  syncMessage = "Sign in to use cloud sync.";
+  render();
+
   await supabase.auth.signOut();
 }
 
