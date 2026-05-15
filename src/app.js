@@ -75,7 +75,7 @@ const plans = [
     price: "INR 0 / first month",
     fit: "For testing Vouchly with real customers before paying.",
     limits: "Up to 100 customers in the first month",
-    includes: ["Customer list", "Review request tracking", "CSV data backup", "Editable templates", "25 automated review requests", "10 follow-up tasks"]
+    includes: ["Customer list", "Review request tracking", "CSV data backup", "Editable templates", "30 automated review requests", "10 follow-up tasks"]
   },
   {
     id: "starter",
@@ -83,7 +83,7 @@ const plans = [
     price: "INR 999 / month",
     fit: "For small shops or solo businesses that want organized review tracking.",
     limits: "Up to 500 customers/month",
-    includes: ["Customer list", "Manual review request tracking", "CSV data backup", "No automated message sending"]
+    includes: ["Customer list", "Review request tracking", "CSV data backup", "100 automated review requests"]
   },
   {
     id: "growth",
