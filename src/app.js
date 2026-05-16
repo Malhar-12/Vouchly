@@ -169,6 +169,10 @@ const savedTaskTitleMap = {
   "Review follow-up": "Review reminder",
   "Bulk review request": "Review request batch"
 };
+const savedCustomerStatusMap = {
+  sent: "scheduled"
+};
+const customerListLimit = 50;
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -185,6 +189,11 @@ let appMessage = "";
 let syncStatus = "Starting";
 let syncMessage = "Checking account...";
 let saveTimer = null;
+let customerFilters = {
+  query: "",
+  status: "all",
+  channel: "all"
+};
 
 function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
@@ -201,6 +210,7 @@ function loadLocalState() {
 
 function mergeState(nextState = {}) {
   const tasks = nextState.tasks ?? defaultState.tasks;
+  const customers = nextState.customers ?? defaultState.customers;
 
   return {
     ...structuredClone(defaultState),
@@ -209,7 +219,10 @@ function mergeState(nextState = {}) {
       ...defaultState.business,
       ...(nextState.business ?? {})
     },
-    customers: nextState.customers ?? defaultState.customers,
+    customers: customers.map((customer) => ({
+      ...customer,
+      status: savedCustomerStatusMap[customer.status] ?? customer.status
+    })),
     tasks: tasks.map((task) => ({
       ...task,
       title: savedTaskTitleMap[task.title] ?? task.title
@@ -398,7 +411,7 @@ function queueReviewRequest(customerId) {
   setState((current) => ({
     ...current,
     customers: current.customers.map((entry) =>
-      entry.id === customerId ? { ...entry, status: "sent" } : entry
+      entry.id === customerId ? { ...entry, status: "scheduled" } : entry
     ),
     tasks: [
       {
@@ -687,6 +700,9 @@ function metricCard(label, value, detail) {
 }
 
 function renderCustomers() {
+  const filteredCustomers = filterCustomers(state.customers);
+  const visibleCustomers = filteredCustomers.slice(0, customerListLimit);
+
   return `
     <section class="panel">
       <div class="panel-head">
@@ -708,14 +724,48 @@ function renderCustomers() {
         <input name="source" placeholder="Source" value="walk-in" />
         <button class="primary-button" type="submit">Add customer</button>
       </form>
-      ${customerRows(state.customers)}
+      <div class="list-toolbar">
+        <input data-filter="query" value="${escapeHtml(customerFilters.query)}" placeholder="Search name, phone, email..." />
+        <select data-filter="status">
+          <option value="all" ${customerFilters.status === "all" ? "selected" : ""}>All statuses</option>
+          <option value="pending" ${customerFilters.status === "pending" ? "selected" : ""}>Pending</option>
+          <option value="scheduled" ${customerFilters.status === "scheduled" ? "selected" : ""}>Scheduled</option>
+          <option value="reviewed" ${customerFilters.status === "reviewed" ? "selected" : ""}>Reviewed</option>
+        </select>
+        <select data-filter="channel">
+          <option value="all" ${customerFilters.channel === "all" ? "selected" : ""}>All channels</option>
+          <option value="whatsapp" ${customerFilters.channel === "whatsapp" ? "selected" : ""}>WhatsApp</option>
+          <option value="sms" ${customerFilters.channel === "sms" ? "selected" : ""}>SMS</option>
+          <option value="email" ${customerFilters.channel === "email" ? "selected" : ""}>Email</option>
+        </select>
+        <span class="result-count">
+          Showing ${visibleCustomers.length} of ${filteredCustomers.length} customers
+        </span>
+      </div>
+      ${filteredCustomers.length > customerListLimit ? `<div class="list-note">Showing the latest ${customerListLimit}. Use search or filters to find older customers.</div>` : ""}
+      ${customerRows(visibleCustomers)}
     </section>
   `;
 }
 
+function filterCustomers(customers) {
+  const query = customerFilters.query.trim().toLowerCase();
+
+  return customers.filter((customer) => {
+    const searchable = `${customer.name} ${customer.phone} ${customer.email}`.toLowerCase();
+    const matchesQuery = !query || searchable.includes(query);
+    const matchesStatus =
+      customerFilters.status === "all" || customer.status === customerFilters.status;
+    const matchesChannel =
+      customerFilters.channel === "all" || customer.channel === customerFilters.channel;
+
+    return matchesQuery && matchesStatus && matchesChannel;
+  });
+}
+
 function customerRows(customers) {
   if (!customers.length) {
-    return `<div class="empty-state">No customers yet.</div>`;
+    return `<div class="empty-state">No customers match this view.</div>`;
   }
 
   return `
@@ -742,7 +792,7 @@ function customerRows(customers) {
                   <td>${escapeHtml(customer.visitDate)}</td>
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(customer.status)}</span></td>
                   <td class="row-actions">
-                    <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview</button>
+                    <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview msg</button>
                     <button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule</button>
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
                   </td>
@@ -992,6 +1042,15 @@ function bindEvents() {
 
   document.querySelector("#customer-form")?.addEventListener("submit", addCustomer);
   document.querySelector("#settings-form")?.addEventListener("submit", saveSettings);
+  document.querySelectorAll("[data-filter]").forEach((field) => {
+    field.addEventListener("input", () => {
+      customerFilters = {
+        ...customerFilters,
+        [field.dataset.filter]: field.value
+      };
+      render();
+    });
+  });
   document.querySelectorAll('input[name="plan"]').forEach((input) => {
     input.addEventListener("change", () => {
       const selectedPlan = plans.find((plan) => plan.id === input.value) ?? plans[0];
@@ -1086,7 +1145,7 @@ function bulkQueueRequests() {
   setState((current) => ({
     ...current,
     customers: current.customers.map((customer) =>
-      customer.status === "pending" ? { ...customer, status: "sent" } : customer
+      customer.status === "pending" ? { ...customer, status: "scheduled" } : customer
     ),
     tasks: [...tasks, ...current.tasks]
   }));
