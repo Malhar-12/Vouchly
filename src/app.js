@@ -164,6 +164,11 @@ const defaultState = {
 };
 
 const storageKey = "vouchly-universal-state-v2";
+const savedTaskTitleMap = {
+  "Send review request": "Review request",
+  "Review follow-up": "Review reminder",
+  "Bulk review request": "Review request batch"
+};
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -195,6 +200,8 @@ function loadLocalState() {
 }
 
 function mergeState(nextState = {}) {
+  const tasks = nextState.tasks ?? defaultState.tasks;
+
   return {
     ...structuredClone(defaultState),
     ...nextState,
@@ -203,7 +210,10 @@ function mergeState(nextState = {}) {
       ...(nextState.business ?? {})
     },
     customers: nextState.customers ?? defaultState.customers,
-    tasks: nextState.tasks ?? defaultState.tasks,
+    tasks: tasks.map((task) => ({
+      ...task,
+      title: savedTaskTitleMap[task.title] ?? task.title
+    })),
     templates: nextState.templates ?? defaultState.templates
   };
 }
