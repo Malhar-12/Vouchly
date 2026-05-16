@@ -133,7 +133,7 @@ const defaultState = {
       email: "",
       channel: "sms",
       visitDate: "2026-05-09",
-      status: "sent",
+      status: "scheduled",
       source: "service"
     }
   ],
@@ -160,7 +160,8 @@ const defaultState = {
       channel: "sms",
       text: "Hi {{name}}, quick reminder from {{business}}. Your review helps local customers find us: {{link}}"
     }
-  ]
+  ],
+  deletedCustomerKeys: []
 };
 
 const storageKey = "vouchly-universal-state-v2";
@@ -194,6 +195,7 @@ let customerFilters = {
   status: "all",
   channel: "all"
 };
+let hasStoredLocalState = false;
 
 function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
@@ -201,9 +203,12 @@ function loadLocalState() {
     return structuredClone(defaultState);
   }
 
+  hasStoredLocalState = true;
+
   try {
     return mergeState(JSON.parse(stored));
   } catch {
+    hasStoredLocalState = false;
     return structuredClone(defaultState);
   }
 }
@@ -211,6 +216,7 @@ function loadLocalState() {
 function mergeState(nextState = {}) {
   const tasks = nextState.tasks ?? defaultState.tasks;
   const customers = nextState.customers ?? defaultState.customers;
+  const deletedCustomerKeys = nextState.deletedCustomerKeys ?? defaultState.deletedCustomerKeys;
 
   return {
     ...structuredClone(defaultState),
@@ -227,11 +233,13 @@ function mergeState(nextState = {}) {
       ...task,
       title: savedTaskTitleMap[task.title] ?? task.title
     })),
-    templates: nextState.templates ?? defaultState.templates
+    templates: nextState.templates ?? defaultState.templates,
+    deletedCustomerKeys
   };
 }
 
 function saveLocalState() {
+  hasStoredLocalState = true;
   window.localStorage.setItem(storageKey, JSON.stringify(state));
 }
 
@@ -305,14 +313,75 @@ async function loadRemoteState() {
   }
 
   if (data?.state) {
-    setState(mergeState(data.state), { skipRemote: true });
+    const remoteState = mergeState(data.state);
+    const nextState = hasStoredLocalState ? mergeWorkspaceStates(remoteState, state) : remoteState;
+    const shouldRepairRemote =
+      nextState.customers.length !== remoteState.customers.length ||
+      nextState.tasks.length !== remoteState.tasks.length;
+
+    setState(nextState, { skipRemote: true });
     syncStatus = "Cloud synced";
-    syncMessage = `Private workspace for ${session.user.email}`;
+    syncMessage = shouldRepairRemote
+      ? `Recovered local changes for ${session.user.email}`
+      : `Private workspace for ${session.user.email}`;
     render();
+
+    if (shouldRepairRemote) {
+      await saveRemoteState();
+    }
+
     return;
   }
 
   await saveRemoteState();
+}
+
+function mergeWorkspaceStates(remoteState, localState) {
+  const deletedCustomerKeys = [
+    ...new Set([...(remoteState.deletedCustomerKeys ?? []), ...(localState.deletedCustomerKeys ?? [])])
+  ];
+
+  return {
+    ...remoteState,
+    activeView: localState.activeView ?? remoteState.activeView,
+    business: {
+      ...remoteState.business,
+      ...localState.business
+    },
+    customers: mergeUniqueRecords(remoteState.customers, localState.customers, customerRecordKey).filter(
+      (customer) => !deletedCustomerKeys.includes(customerRecordKey(customer))
+    ),
+    tasks: mergeUniqueRecords(remoteState.tasks, localState.tasks, taskRecordKey),
+    templates: localState.templates?.length ? localState.templates : remoteState.templates,
+    deletedCustomerKeys
+  };
+}
+
+function mergeUniqueRecords(primaryRecords = [], secondaryRecords = [], getKey) {
+  const seen = new Set();
+  const records = [];
+
+  [...primaryRecords, ...secondaryRecords].forEach((record) => {
+    const key = getKey(record);
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    records.push(record);
+  });
+
+  return records;
+}
+
+function customerRecordKey(customer) {
+  const contact = customer.phone || customer.email || customer.name;
+  return `${customer.name}|${contact}|${customer.visitDate}`.toLowerCase();
+}
+
+function taskRecordKey(task) {
+  return `${task.title}|${task.customerName}|${task.channel}|${task.dueAt}`.toLowerCase();
 }
 
 async function init() {
@@ -430,9 +499,13 @@ function queueReviewRequest(customerId) {
 function deleteCustomer(customerId) {
   setState((current) => {
     const customer = current.customers.find((entry) => entry.id === customerId);
+    const deletedCustomerKeys = customer
+      ? [...new Set([...(current.deletedCustomerKeys ?? []), customerRecordKey(customer)])]
+      : current.deletedCustomerKeys ?? [];
 
     return {
       ...current,
+      deletedCustomerKeys,
       customers: current.customers.filter((entry) => entry.id !== customerId),
       tasks: current.tasks.filter((task) => !customer || task.customerName !== customer.name)
     };
@@ -1070,6 +1143,7 @@ function addCustomer(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const customer = Object.fromEntries(form.entries());
+  appMessage = `${customer.name} added to customers.`;
 
   setState((current) => ({
     ...current,
