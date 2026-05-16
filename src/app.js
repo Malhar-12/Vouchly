@@ -621,50 +621,169 @@ function renderAuth() {
   const isSignup = authMode === "signup";
 
   return `
-    <main class="auth-page">
-      <section class="auth-card">
-        <div class="auth-brand">
-          <span class="brand-mark">V</span>
-          <div>
-            <p class="eyebrow">Vouchly</p>
-            <strong>Review Growth Console</strong>
+    <main class="marketing-page">
+      <nav class="marketing-nav">
+        <a class="marketing-logo" href="#hero" aria-label="Vouchly home">
+          <span>V</span>
+          Vouchly
+        </a>
+        <div class="marketing-links">
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div class="marketing-actions">
+          <a class="ghost-button small" href="#auth-panel" data-auth-mode="signin">Sign in</a>
+          <a class="primary-button small" href="#auth-panel" data-auth-mode="signup">Start free</a>
+        </div>
+      </nav>
+
+      <section class="marketing-hero" id="hero">
+        <div class="hero-copy">
+          <p class="hero-badge">First month free. No credit card needed.</p>
+          <h1>Turn happy customers into Google reviews.</h1>
+          <p>
+            Vouchly helps local businesses organize customers, schedule review requests,
+            manage message templates, and track follow-ups from one simple dashboard.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#auth-panel" data-auth-mode="signup">Start free month</a>
+            <a class="ghost-button" href="#pricing">See plans</a>
           </div>
         </div>
-        <h1>${isSignup ? "Start your review engine" : "Welcome back to Vouchly"}</h1>
-        <p>${isSignup ? "Create a private workspace for customers, review links, follow-ups, and templates." : "Open your saved customer and automation workspace."}</p>
-        <form id="auth-form" class="auth-form">
-          <input name="email" type="email" placeholder="Email" required />
-          <input name="password" type="password" placeholder="Password" required minlength="6" />
-          <button class="primary-button" type="submit">${isSignup ? "Create account" : "Sign in"}</button>
-        </form>
-        ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
-        <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
-          ${isSignup ? "Already have an account? Sign in" : "New business? Create account"}
-        </button>
-      </section>
-      <section class="auth-preview" aria-hidden="true">
-        <div class="preview-top">
-          <span>Today</span>
-          <strong>Review requests</strong>
-        </div>
-        <div class="preview-metric">
-          <strong>42</strong>
-          <span>customers queued</span>
-        </div>
-        <div class="preview-row">
-          <span>WhatsApp follow-up</span>
-          <strong>Ready</strong>
-        </div>
-        <div class="preview-row">
-          <span>Google review link</span>
-          <strong>Attached</strong>
-        </div>
-        <div class="preview-row">
-          <span>Reminder template</span>
-          <strong>Saved</strong>
+        <div class="hero-dashboard-card" aria-label="Vouchly dashboard preview">
+          <div class="mock-topbar">
+            <span></span><span></span><span></span>
+            <strong>Vouchly Dashboard</strong>
+          </div>
+          <div class="mock-stats">
+            <article><strong>48</strong><small>Reviews this month</small></article>
+            <article><strong>142</strong><small>Customers added</small></article>
+            <article><strong>87%</strong><small>Request response rate</small></article>
+          </div>
+          <div class="mock-row"><span>Rahul Kumar</span><strong>Reviewed</strong></div>
+          <div class="mock-row"><span>Priya Shah</span><strong>Scheduled</strong></div>
+          <div class="mock-row"><span>Amit Mehta</span><strong>Pending</strong></div>
         </div>
       </section>
+
+      <section class="marketing-section" id="how">
+        <p class="eyebrow">How it works</p>
+        <h2>Simple enough for any local business owner</h2>
+        <div class="marketing-grid four">
+          ${marketingStep("1", "Set up profile", "Add your business name, type, city, and Google review link.")}
+          ${marketingStep("2", "Add customers", "Add customers after a sale, visit, appointment, or service.")}
+          ${marketingStep("3", "Schedule requests", "Preview the message and schedule the review request.")}
+          ${marketingStep("4", "Track follow-ups", "See who is pending, scheduled, reviewed, or needs attention.")}
+        </div>
+      </section>
+
+      <section class="marketing-section" id="features">
+        <p class="eyebrow">Features</p>
+        <h2>Everything needed to start review automation</h2>
+        <div class="marketing-grid three">
+          ${marketingFeature("Customer list management", "Store customer name, contact, visit date, channel, and status.")}
+          ${marketingFeature("Review request scheduling", "Create review reminders for WhatsApp, SMS, or email workflows.")}
+          ${marketingFeature("Editable templates", "Keep ready-made messages with your Google review link attached.")}
+          ${marketingFeature("Follow-up tracking", "Know who still needs a reminder before reviews are lost.")}
+          ${marketingFeature("CSV data backup", "Download customer and automation data in spreadsheet-friendly CSV format.")}
+          ${marketingFeature("Built for India", "Simple words and flows for shopkeepers, clinics, salons, hotels, and services.")}
+        </div>
+      </section>
+
+      <section class="marketing-section industries">
+        <p class="eyebrow">Who uses Vouchly</p>
+        <h2>For local businesses where reviews decide trust</h2>
+        <div class="industry-tags">
+          ${["Restaurants", "Cafes", "Salons", "Clinics", "Dentists", "Hotels", "Garages", "Car wash", "Coaching classes", "Mobile repair", "Travel agencies", "Gyms", "Spas", "Pharmacies", "Real estate", "Photographers"].map((item) => `<span>${item}</span>`).join("")}
+        </div>
+      </section>
+
+      <section class="marketing-section" id="pricing">
+        <p class="eyebrow">Pricing</p>
+        <h2>Simple, honest pricing</h2>
+        <p class="section-sub">Start free. Upgrade when your customer volume grows.</p>
+        <div class="pricing-grid">
+          ${plans.map((plan) => renderMarketingPlan(plan)).join("")}
+        </div>
+      </section>
+
+      <section class="marketing-auth-section" id="auth-panel">
+        <div class="auth-trust-panel">
+          <span class="brand-mark">V</span>
+          <h2>More reviews. More customers. More trust.</h2>
+          <p>Made for Indian local businesses that want a simple review follow-up system without technical setup.</p>
+          <ul>
+            <li>No technical knowledge needed</li>
+            <li>First month free</li>
+            <li>Private workspace with Supabase login</li>
+            <li>Works on mobile and desktop</li>
+          </ul>
+        </div>
+
+        <section class="auth-card marketing-auth-card">
+          <div class="auth-tabs">
+            <button class="${!isSignup ? "active" : ""}" data-auth-mode="signin" type="button">Sign in</button>
+            <button class="${isSignup ? "active" : ""}" data-auth-mode="signup" type="button">Create account</button>
+          </div>
+          <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
+          <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
+          <form id="auth-form" class="auth-form">
+            <input name="email" type="email" placeholder="you@business.com" required />
+            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" required minlength="6" />
+            <button class="primary-button" type="submit">${isSignup ? "Create free account" : "Sign in to Vouchly"}</button>
+          </form>
+          ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
+          <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
+            ${isSignup ? "Already have an account? Sign in" : "New business? Start free"}
+          </button>
+        </section>
+      </section>
+
+      <footer class="marketing-footer">
+        <strong>Vouchly</strong>
+        <span>Made for Indian local businesses</span>
+      </footer>
     </main>
+  `;
+}
+
+function marketingStep(number, title, body) {
+  return `
+    <article class="marketing-card">
+      <span class="step-number">${number}</span>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+    </article>
+  `;
+}
+
+function marketingFeature(title, body) {
+  return `
+    <article class="marketing-card">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+    </article>
+  `;
+}
+
+function renderMarketingPlan(plan) {
+  const isGrowth = plan.id === "growth";
+
+  return `
+    <article class="marketing-plan ${isGrowth ? "popular" : ""}">
+      ${isGrowth ? `<span class="popular-pill">Most popular</span>` : ""}
+      <span>${escapeHtml(plan.name)}</span>
+      <strong>${escapeHtml(plan.price)}</strong>
+      <p>${escapeHtml(plan.fit)}</p>
+      <small>${escapeHtml(plan.limits)}</small>
+      <ul>
+        ${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+      </ul>
+      <a class="${isGrowth ? "primary-button" : "ghost-button"} small" href="#auth-panel" data-auth-mode="signup">
+        ${plan.id === "free" ? "Start free month" : `Choose ${escapeHtml(plan.name)}`}
+      </a>
+    </article>
   `;
 }
 
@@ -1057,10 +1176,16 @@ function renderPlanDetail(plan) {
 
 function bindAuthEvents() {
   document.querySelector("#auth-form")?.addEventListener("submit", submitAuth);
-  document.querySelector("[data-auth-mode]")?.addEventListener("click", (event) => {
-    authMode = event.currentTarget.dataset.authMode;
-    authMessage = "";
-    render();
+  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      authMode = event.currentTarget.dataset.authMode;
+      authMessage = "";
+      render();
+      window.setTimeout(() => {
+        document.querySelector("#auth-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+    });
   });
 }
 
