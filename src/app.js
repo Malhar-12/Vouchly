@@ -693,15 +693,34 @@ function renderAuth() {
 
       <section class="marketing-section industries">
         <p class="eyebrow">Who uses Vouchly</p>
-        <h2>For local businesses where reviews decide trust</h2>
+        <h2>Built for every local business</h2>
         <div class="industry-tags">
-          ${["Restaurants", "Cafes", "Salons", "Clinics", "Dentists", "Hotels", "Garages", "Car wash", "Coaching classes", "Mobile repair", "Travel agencies", "Gyms", "Spas", "Pharmacies", "Real estate", "Photographers"].map((item) => `<span>${item}</span>`).join("")}
+          ${[
+            ["Restaurants", "🍽️"],
+            ["Salons", "💇"],
+            ["Clinics", "🏥"],
+            ["Dentists", "🦷"],
+            ["Hotels", "🏨"],
+            ["Garages", "🚗"],
+            ["Car Wash", "🧽"],
+            ["Coaching Classes", "📚"],
+            ["Mobile Repair", "📱"],
+            ["Furniture Stores", "🛋️"],
+            ["Travel Agencies", "✈️"],
+            ["Gyms", "💪"],
+            ["Spas", "🧖"],
+            ["Pet Clinics", "🐾"],
+            ["Pharmacies", "💊"],
+            ["Real Estate", "🏠"],
+            ["Photographers", "📸"],
+            ["Service Providers", "🔧"]
+          ].map(([item, icon]) => `<span><b>${icon}</b>${item}</span>`).join("")}
         </div>
       </section>
 
-      <section class="marketing-section" id="pricing">
+      <section class="marketing-section pricing-section" id="pricing">
         <p class="eyebrow">Pricing</p>
-        <h2>Simple, honest pricing</h2>
+        <h2>Simple plans that grow with you</h2>
         <p class="section-sub">Start free. Upgrade when your customer volume grows.</p>
         <div class="pricing-grid">
           ${plans.map((plan) => renderMarketingPlan(plan)).join("")}
