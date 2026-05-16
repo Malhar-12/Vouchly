@@ -217,6 +217,8 @@ select {
 }
 
 .main {
+  min-width: 0;
+  overflow-x: hidden;
   padding: 36px 42px 56px;
 }
 
@@ -344,7 +346,7 @@ h2 {
 .split-grid {
   display: grid;
   gap: 22px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .sync-banner {
@@ -374,6 +376,7 @@ h2 {
 }
 
 .panel {
+  min-width: 0;
   padding: 24px;
 }
 
@@ -538,11 +541,13 @@ textarea {
 }
 
 .table-wrap {
+  max-width: 100%;
   overflow-x: auto;
 }
 
 table {
   border-collapse: collapse;
+  min-width: 720px;
   width: 100%;
 }
 

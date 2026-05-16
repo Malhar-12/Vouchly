@@ -140,7 +140,7 @@ const defaultState = {
   tasks: [
     {
       id: 11,
-      title: "Send review request",
+      title: "Review request",
       customerName: "Priya Sharma",
       channel: "whatsapp",
       dueAt: "2026-05-11 11:00",
@@ -393,7 +393,7 @@ function queueReviewRequest(customerId) {
     tasks: [
       {
         id: nextId(current.tasks),
-        title: "Review follow-up",
+        title: "Review reminder",
         customerName: customer.name,
         channel: customer.channel,
         dueAt: `${dueDate.toISOString().slice(0, 10)} 17:00`,
@@ -499,7 +499,7 @@ function render() {
         </div>
         ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
         ${setupComplete ? navButton("customers", "Customers") : ""}
-        ${setupComplete ? navButton("automations", "Automations") : ""}
+        ${setupComplete ? navButton("automations", "Follow-ups") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
         <div class="business-card">
@@ -639,14 +639,14 @@ function renderDashboard() {
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
       ${metricCard("Review rate", `${completionRate()}%`, "marked reviewed")}
       ${metricCard("Pending", pending, "need first request")}
-      ${metricCard("Automations", scheduled, "scheduled tasks")}
+      ${metricCard("Follow-ups", scheduled, "scheduled reminders")}
     </section>
     <section class="split-grid">
       <div class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Queue</p>
-            <h2>Customers needing action</h2>
+            <p class="eyebrow">Requests</p>
+            <h2>Customers to contact</h2>
           </div>
           <button class="ghost-button small" data-view="customers">Open</button>
         </div>
@@ -655,8 +655,8 @@ function renderDashboard() {
       <div class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Automation</p>
-            <h2>Upcoming follow-ups</h2>
+            <p class="eyebrow">Follow-ups</p>
+            <h2>Scheduled reminders</h2>
           </div>
           <button class="ghost-button small" data-view="automations">Open</button>
         </div>
@@ -682,7 +682,7 @@ function renderCustomers() {
       <div class="panel-head">
         <div>
           <p class="eyebrow">Customers</p>
-          <h2>Add customer and queue review automation</h2>
+          <h2>Add customer and schedule a review request</h2>
         </div>
       </div>
       <form class="inline-form" id="customer-form">
@@ -733,7 +733,7 @@ function customerRows(customers) {
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(customer.status)}</span></td>
                   <td class="row-actions">
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview</button>
-                    <button class="ghost-button small" data-action="queue" data-id="${customer.id}">Queue</button>
+                    <button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule</button>
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
                   </td>
                 </tr>
@@ -751,8 +751,8 @@ function renderAutomations() {
     <section class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Automations</p>
-          <h2>Scheduled review follow-ups</h2>
+          <p class="eyebrow">Follow-ups</p>
+          <h2>Scheduled customer reminders</h2>
         </div>
       </div>
       ${taskRows(state.tasks)}
@@ -1015,7 +1015,7 @@ function addCustomer(event) {
     tasks: [
       {
         id: nextId(current.tasks),
-        title: "Send review request",
+        title: "Review request",
         customerName: customer.name,
         channel: customer.channel,
         dueAt: `${customer.visitDate} 11:00`,
@@ -1066,7 +1066,7 @@ function bulkQueueRequests() {
   const pendingCustomers = state.customers.filter((customer) => customer.status === "pending");
   const tasks = pendingCustomers.map((customer, index) => ({
     id: Date.now() + index,
-    title: "Bulk review request",
+    title: "Review request batch",
     customerName: customer.name,
     channel: customer.channel,
     dueAt: `${new Date().toISOString().slice(0, 10)} 18:00`,
