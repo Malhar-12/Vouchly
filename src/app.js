@@ -181,6 +181,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+let hasStoredLocalState = false;
 let state = loadLocalState();
 let session = null;
 let loading = true;
@@ -195,7 +196,6 @@ let customerFilters = {
   status: "all",
   channel: "all"
 };
-let hasStoredLocalState = false;
 
 function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
