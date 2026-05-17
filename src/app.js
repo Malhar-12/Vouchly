@@ -777,8 +777,8 @@ function renderAuth() {
           <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
           <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
           <form id="auth-form" class="auth-form">
-            <input name="email" type="email" placeholder="you@business.com" required />
-            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" required minlength="6" />
+            <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
+            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
             <button class="primary-button" type="submit">${isSignup ? "Create free account" : "Sign in to Vouchly"}</button>
           </form>
           ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
@@ -1223,6 +1223,14 @@ function renderPlanDetail(plan) {
 }
 
 function bindAuthEvents() {
+  window.setTimeout(() => {
+    document.querySelectorAll("[data-private-input]").forEach((input) => {
+      if (document.activeElement !== input) {
+        input.value = "";
+      }
+    });
+  }, 50);
+
   document.querySelector("#auth-form")?.addEventListener("submit", submitAuth);
   document.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.addEventListener("click", (event) => {
