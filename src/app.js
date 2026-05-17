@@ -641,33 +641,37 @@ function renderAuth() {
       <section class="marketing-hero" id="hero">
         <div class="hero-copy">
           <p class="hero-badge">First month free. No credit card needed.</p>
-          <h1>Turn happy customers into Google reviews.</h1>
+          <h1>Turn happy customers into <span>Google reviews.</span></h1>
           <p>
             Vouchly helps local businesses organize customers, schedule review requests,
             manage message templates, and track follow-ups from one simple dashboard.
           </p>
           <div class="hero-actions">
-            <a class="primary-button" href="#auth-panel" data-auth-mode="signup">Start free month</a>
-            <a class="ghost-button" href="#pricing">See plans</a>
+            <a class="primary-button" href="#auth-panel" data-auth-mode="signup">Start free month -></a>
+            <a class="ghost-button" href="#pricing">See plans -></a>
           </div>
         </div>
         <div class="hero-dashboard-card" aria-label="Vouchly dashboard preview">
           <div class="mock-topbar">
             <span></span><span></span><span></span>
-            <strong>Vouchly Dashboard</strong>
+            <strong>Vouchly Dashboard - My Salon</strong>
           </div>
           <div class="mock-stats">
             <article><strong>48</strong><small>Reviews this month</small></article>
             <article><strong>142</strong><small>Customers added</small></article>
             <article><strong>87%</strong><small>Request response rate</small></article>
           </div>
-          <div class="mock-row"><span>Rahul Kumar</span><strong>Reviewed</strong></div>
-          <div class="mock-row"><span>Priya Shah</span><strong>Scheduled</strong></div>
-          <div class="mock-row"><span>Amit Mehta</span><strong>Pending</strong></div>
+          <div class="mock-section-title">
+            <span>Recent customers</span>
+            <strong>12 pending follow-up</strong>
+          </div>
+          <div class="mock-row"><span>Rahul Kumar</span><small>WhatsApp request sent</small><strong>Reviewed</strong></div>
+          <div class="mock-row"><span>Priya Shah</span><small>Reminder scheduled</small><strong>Scheduled</strong></div>
+          <div class="mock-row"><span>Amit Mehta</span><small>Needs first request</small><strong>Pending</strong></div>
         </div>
       </section>
 
-      <section class="marketing-section" id="how">
+      <section class="marketing-section showcase-section" id="how">
         <p class="eyebrow">How it works</p>
         <h2>Simple enough for any local business owner</h2>
         <div class="marketing-grid four">
@@ -678,7 +682,7 @@ function renderAuth() {
         </div>
       </section>
 
-      <section class="marketing-section" id="features">
+      <section class="marketing-section showcase-section feature-pop-section" id="features">
         <p class="eyebrow">Features</p>
         <h2>Everything needed to start review automation</h2>
         <div class="marketing-grid three">
