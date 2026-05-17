@@ -72,13 +72,32 @@ select {
 
 .marketing-logo span {
   align-items: center;
-  background: var(--brand);
-  border-radius: 10px;
+  background:
+    radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.95) 0 8%, transparent 9%),
+    linear-gradient(135deg, #0f766e, #13a090);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 14px 30px rgba(18, 107, 104, 0.22);
   color: white;
   display: inline-flex;
-  height: 34px;
+  height: 42px;
   justify-content: center;
-  width: 34px;
+  position: relative;
+  width: 42px;
+}
+
+.marketing-logo span::after,
+.brand-mark::after {
+  background: #ffd166;
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.85);
+  content: "";
+  height: 8px;
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 8px;
 }
 
 .marketing-links,
@@ -363,15 +382,26 @@ select {
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.showcase-section .marketing-card::after {
-  background: linear-gradient(135deg, rgba(18, 107, 104, 0.12), rgba(216, 132, 49, 0.1));
-  border-radius: 999px;
-  content: "";
-  height: 58px;
+.showcase-section .feature-card::after {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(18, 107, 104, 0.12), rgba(255, 255, 255, 0.94));
+  border: 1px solid rgba(18, 107, 104, 0.18);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 16px 30px rgba(18, 107, 104, 0.11);
+  color: var(--brand-strong);
+  content: attr(data-badge);
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 900;
+  height: 44px;
+  justify-content: center;
+  letter-spacing: 0.08em;
   position: absolute;
-  right: 18px;
-  top: 18px;
-  width: 58px;
+  right: 22px;
+  top: 22px;
+  width: 74px;
   z-index: 0;
 }
 
@@ -685,16 +715,19 @@ select {
 
 .marketing-footer {
   align-items: center;
-  background: #10191d;
+  background:
+    radial-gradient(circle at 35% 0%, rgba(19, 160, 144, 0.22), transparent 28rem),
+    #10191d;
   color: white;
   display: flex;
   gap: 12px;
   justify-content: center;
-  padding: 28px;
+  padding: 34px;
 }
 
 .marketing-footer span {
   color: #aac0c6;
+  font-weight: 700;
 }
 
 .auth-card {
@@ -832,6 +865,7 @@ select {
   font-weight: 800;
   height: 44px;
   justify-content: center;
+  position: relative;
   width: 44px;
 }
 
