@@ -384,12 +384,16 @@ select {
 }
 
 .showcase-section .marketing-grid {
+  align-items: stretch;
   margin-inline: auto;
   max-width: 1240px;
   perspective: 1000px;
 }
 
 .showcase-section .marketing-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   min-height: 250px;
   padding: 34px;
   position: relative;
@@ -409,17 +413,13 @@ select {
   transform: translateY(-10px) rotateX(3deg);
 }
 
-.feature-pop-section .marketing-card:nth-child(2n) {
-  transform: translateY(28px);
-}
-
 .feature-pop-section .marketing-grid {
   column-gap: 32px;
-  row-gap: 54px;
+  row-gap: 32px;
 }
 
-.feature-pop-section .marketing-card:nth-child(2n):hover {
-  transform: translateY(14px) rotateX(3deg);
+.feature-pop-section .marketing-card {
+  min-height: 324px;
 }
 
 .marketing-section.industries,
