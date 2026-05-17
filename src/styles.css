@@ -764,6 +764,36 @@ select {
   padding: 12px;
 }
 
+.selected-plan-note {
+  align-items: center;
+  background: var(--soft);
+  border: 1px solid #b7dcd6;
+  border-radius: 14px;
+  color: var(--brand-strong);
+  display: grid;
+  gap: 2px;
+  grid-template-columns: 1fr auto;
+  margin: 18px 0 4px;
+  padding: 14px 16px;
+}
+
+.selected-plan-note span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  grid-column: 1 / -1;
+  text-transform: uppercase;
+}
+
+.selected-plan-note strong {
+  font-size: 1.1rem;
+}
+
+.selected-plan-note small {
+  color: var(--brand);
+  font-weight: 900;
+}
+
 .link-button {
   background: transparent;
   border: 0;

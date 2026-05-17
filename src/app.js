@@ -191,6 +191,7 @@ let appMessage = "";
 let syncStatus = "Starting";
 let syncMessage = "Checking account...";
 let saveTimer = null;
+let pendingPlanId = window.localStorage.getItem("vouchly-pending-plan") || "";
 let customerFilters = {
   query: "",
   status: "all",
@@ -315,11 +316,22 @@ async function loadRemoteState() {
   if (data?.state) {
     const remoteState = mergeState(data.state);
     const nextState = hasStoredLocalState ? mergeWorkspaceStates(remoteState, state) : remoteState;
+    const planFromLanding = pendingPlanId && !nextState.business.setupComplete ? pendingPlanId : "";
+    const stateWithPlan = planFromLanding
+      ? {
+          ...nextState,
+          business: {
+            ...nextState.business,
+            plan: planFromLanding
+          }
+        }
+      : nextState;
     const shouldRepairRemote =
-      nextState.customers.length !== remoteState.customers.length ||
-      nextState.tasks.length !== remoteState.tasks.length;
+      stateWithPlan.customers.length !== remoteState.customers.length ||
+      stateWithPlan.tasks.length !== remoteState.tasks.length ||
+      Boolean(planFromLanding);
 
-    setState(nextState, { skipRemote: true });
+    setState(stateWithPlan, { skipRemote: true });
     syncStatus = "Cloud synced";
     syncMessage = shouldRepairRemote
       ? `Recovered local changes for ${session.user.email}`
@@ -331,6 +343,19 @@ async function loadRemoteState() {
     }
 
     return;
+  }
+
+  if (pendingPlanId) {
+    setState(
+      (current) => ({
+        ...current,
+        business: {
+          ...current.business,
+          plan: pendingPlanId
+        }
+      }),
+      { skipRemote: true }
+    );
   }
 
   await saveRemoteState();
@@ -619,6 +644,7 @@ function render() {
 
 function renderAuth() {
   const isSignup = authMode === "signup";
+  const pendingPlan = plans.find((plan) => plan.id === pendingPlanId) ?? plans[0];
 
   return `
     <main class="marketing-page">
@@ -634,7 +660,7 @@ function renderAuth() {
         </div>
         <div class="marketing-actions">
           <a class="ghost-button small" href="#auth-panel" data-auth-mode="signin">Sign in</a>
-          <a class="primary-button small" href="#auth-panel" data-auth-mode="signup">Start free</a>
+          <a class="primary-button small" href="#auth-panel" data-auth-mode="signup" data-plan-id="free">Start free</a>
         </div>
       </nav>
 
@@ -647,7 +673,7 @@ function renderAuth() {
             manage message templates, and track follow-ups from one simple dashboard.
           </p>
           <div class="hero-actions">
-            <a class="primary-button" href="#auth-panel" data-auth-mode="signup">Start free month -></a>
+            <a class="primary-button" href="#auth-panel" data-auth-mode="signup" data-plan-id="free">Start free month -></a>
             <a class="ghost-button" href="#pricing">See plans -></a>
           </div>
         </div>
@@ -776,6 +802,7 @@ function renderAuth() {
           </div>
           <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
           <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
+          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${escapeHtml(pendingPlan.price)}</small></div>` : ""}
           <form id="auth-form" class="auth-form">
             <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
             <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
@@ -828,7 +855,7 @@ function renderMarketingPlan(plan) {
       <ul>
         ${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
       </ul>
-      <a class="${isGrowth ? "primary-button" : "ghost-button"} small" href="#auth-panel" data-auth-mode="signup">
+      <a class="${isGrowth ? "primary-button" : "ghost-button"} small" href="#auth-panel" data-auth-mode="signup" data-plan-id="${escapeHtml(plan.id)}">
         ${plan.id === "free" ? "Start free month" : `Choose ${escapeHtml(plan.name)}`}
       </a>
     </article>
@@ -1236,6 +1263,10 @@ function bindAuthEvents() {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       authMode = event.currentTarget.dataset.authMode;
+      if (event.currentTarget.dataset.planId) {
+        pendingPlanId = event.currentTarget.dataset.planId;
+        window.localStorage.setItem("vouchly-pending-plan", pendingPlanId);
+      }
       authMessage = "";
       render();
       window.setTimeout(() => {
@@ -1384,6 +1415,9 @@ function saveSettings(event) {
       return template;
     })
   }));
+
+  window.localStorage.removeItem("vouchly-pending-plan");
+  pendingPlanId = "";
 }
 
 function bulkQueueRequests() {
