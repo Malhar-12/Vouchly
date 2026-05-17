@@ -686,12 +686,12 @@ function renderAuth() {
         <p class="eyebrow">Features</p>
         <h2>Everything needed to start review automation</h2>
         <div class="marketing-grid three">
-          ${marketingFeature("Customer list management", "Store customer name, contact, visit date, channel, and status.", "CRM")}
-          ${marketingFeature("Review request scheduling", "Create review reminders for WhatsApp, SMS, or email workflows.", "AUTO")}
-          ${marketingFeature("Editable templates", "Keep ready-made messages with your Google review link attached.", "EDIT")}
-          ${marketingFeature("Follow-up tracking", "Know who still needs a reminder before reviews are lost.", "REM")}
-          ${marketingFeature("CSV data backup", "Download customer and automation data in spreadsheet-friendly CSV format.", "CSV")}
-          ${marketingFeature("Built for local growth", "Simple workflows for shops, clinics, salons, hotels, services, and teams worldwide.", "GLOBAL")}
+          ${marketingFeature("Customer list management", "Store customer name, contact, visit date, channel, and status.")}
+          ${marketingFeature("Review request scheduling", "Create review reminders for WhatsApp, SMS, or email workflows.")}
+          ${marketingFeature("Editable templates", "Keep ready-made messages with your Google review link attached.")}
+          ${marketingFeature("Follow-up tracking", "Know who still needs a reminder before reviews are lost.")}
+          ${marketingFeature("CSV data backup", "Download customer and automation data in spreadsheet-friendly CSV format.")}
+          ${marketingFeature("Built for local growth", "Simple workflows for shops, clinics, salons, hotels, services, and teams worldwide.")}
         </div>
       </section>
 
@@ -732,7 +732,17 @@ function renderAuth() {
             ["Photographers", "📸"],
             ["Cleaning Services", "🧹"],
             ["Pest Control", "🛡️"],
-            ["Service Providers", "🔧"]
+            ["Service Providers", "🔧"],
+            ["Cloud Kitchens", "🍱"],
+            ["Bars & Lounges", "🍸"],
+            ["Coworking Spaces", "💼"],
+            ["Interior Designers", "🎯"],
+            ["Tour Operators", "🗺️"],
+            ["Dance Classes", "🎵"],
+            ["Music Classes", "🎸"],
+            ["Swimming Clubs", "🏊"],
+            ["Internet Cafes", "🖥️"],
+            ["Real Local Brands", "✨"]
           ].map(([item, icon]) => `<span><b>${icon}</b>${item}</span>`).join("")}
         </div>
       </section>
@@ -796,9 +806,9 @@ function marketingStep(number, title, body) {
   `;
 }
 
-function marketingFeature(title, body, badge) {
+function marketingFeature(title, body) {
   return `
-    <article class="marketing-card feature-card" data-badge="${escapeHtml(badge)}">
+    <article class="marketing-card feature-card">
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(body)}</p>
     </article>

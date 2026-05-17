@@ -217,16 +217,31 @@ select {
   border: 1px solid rgba(23, 32, 38, 0.1);
   border-radius: 30px;
   box-shadow:
-    0 38px 90px rgba(23, 32, 38, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+    0 48px 0 -28px rgba(18, 107, 104, 0.13),
+    0 72px 120px rgba(23, 32, 38, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.94) inset;
   color: var(--ink);
   margin: 0 auto -64px;
   max-width: 980px;
   overflow: hidden;
   padding: 22px;
-  transform: perspective(1200px) rotateX(9deg) rotateZ(-1.4deg);
+  transform: perspective(1100px) rotateX(11deg) rotateZ(-2deg) translateY(10px);
   transform-origin: top center;
   width: min(980px, 92vw);
+}
+
+.hero-dashboard-card::before {
+  background: linear-gradient(180deg, rgba(18, 107, 104, 0.22), rgba(18, 107, 104, 0));
+  border-radius: 30px;
+  bottom: -28px;
+  content: "";
+  filter: blur(18px);
+  height: 80px;
+  left: 7%;
+  opacity: 0.55;
+  position: absolute;
+  right: 7%;
+  z-index: -1;
 }
 
 .hero-dashboard-card::after {
@@ -370,39 +385,17 @@ select {
 
 .showcase-section .marketing-grid {
   margin-inline: auto;
-  max-width: 1200px;
+  max-width: 1240px;
   perspective: 1000px;
 }
 
 .showcase-section .marketing-card {
-  min-height: 230px;
+  min-height: 250px;
+  padding: 34px;
   position: relative;
   text-align: left;
   transform: translateY(0) rotateX(0);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-}
-
-.showcase-section .feature-card::after {
-  align-items: center;
-  background: linear-gradient(135deg, rgba(18, 107, 104, 0.12), rgba(255, 255, 255, 0.94));
-  border: 1px solid rgba(18, 107, 104, 0.18);
-  border-radius: 16px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    0 16px 30px rgba(18, 107, 104, 0.11);
-  color: var(--brand-strong);
-  content: attr(data-badge);
-  display: inline-flex;
-  font-size: 0.72rem;
-  font-weight: 900;
-  height: 44px;
-  justify-content: center;
-  letter-spacing: 0.08em;
-  position: absolute;
-  right: 22px;
-  top: 22px;
-  width: 74px;
-  z-index: 0;
 }
 
 .showcase-section .marketing-card > * {
@@ -417,11 +410,16 @@ select {
 }
 
 .feature-pop-section .marketing-card:nth-child(2n) {
-  transform: translateY(16px);
+  transform: translateY(28px);
+}
+
+.feature-pop-section .marketing-grid {
+  column-gap: 32px;
+  row-gap: 54px;
 }
 
 .feature-pop-section .marketing-card:nth-child(2n):hover {
-  transform: translateY(4px) rotateX(3deg);
+  transform: translateY(14px) rotateX(3deg);
 }
 
 .marketing-section.industries,
@@ -439,20 +437,6 @@ select {
   border-block: 1px solid rgba(18, 107, 104, 0.12);
   margin-top: 18px;
   padding-block: clamp(82px, 9vw, 132px);
-}
-
-.marketing-section.industries::before {
-  background: rgba(18, 107, 104, 0.08);
-  border: 2px solid rgba(18, 107, 104, 0.34);
-  border-radius: 999px;
-  content: "";
-  height: 48px;
-  left: 50%;
-  position: absolute;
-  top: 94px;
-  transform: translateX(-50%);
-  width: 48px;
-  z-index: -1;
 }
 
 .pricing-section {
