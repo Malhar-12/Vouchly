@@ -764,6 +764,11 @@ select {
   padding: 12px;
 }
 
+.resend-button {
+  margin-top: 12px;
+  width: 100%;
+}
+
 .selected-plan-note {
   align-items: center;
   background: var(--soft);

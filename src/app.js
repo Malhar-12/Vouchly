@@ -187,6 +187,8 @@ let session = null;
 let loading = true;
 let authMode = "signin";
 let authMessage = "";
+let authNeedsConfirmation = false;
+let lastAuthEmail = window.localStorage.getItem("vouchly-pending-email") || "";
 let appMessage = "";
 let syncStatus = "Starting";
 let syncMessage = "Checking account...";
@@ -808,7 +810,16 @@ function renderAuth() {
             <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
             <button class="primary-button" type="submit">${isSignup ? "Create free account" : "Sign in to Vouchly"}</button>
           </form>
-          ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
+          ${
+            authMessage
+              ? `<div class="auth-message">${escapeHtml(authMessage)}</div>`
+              : ""
+          }
+          ${
+            authNeedsConfirmation && lastAuthEmail
+              ? `<button class="ghost-button resend-button" data-action="resend-confirmation" type="button">Resend confirmation email</button>`
+              : ""
+          }
           <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
             ${isSignup ? "Already have an account? Sign in" : "New business? Start free"}
           </button>
@@ -1259,6 +1270,9 @@ function bindAuthEvents() {
   }, 50);
 
   document.querySelector("#auth-form")?.addEventListener("submit", submitAuth);
+  document
+    .querySelector('[data-action="resend-confirmation"]')
+    ?.addEventListener("click", resendConfirmationEmail);
   document.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -1268,6 +1282,7 @@ function bindAuthEvents() {
         window.localStorage.setItem("vouchly-pending-plan", pendingPlanId);
       }
       authMessage = "";
+      authNeedsConfirmation = false;
       render();
       window.setTimeout(() => {
         document.querySelector("#auth-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1279,28 +1294,83 @@ function bindAuthEvents() {
 async function submitAuth(event) {
   event.preventDefault();
   const { email, password } = Object.fromEntries(new FormData(event.currentTarget).entries());
+  const cleanEmail = String(email).trim().toLowerCase();
+  lastAuthEmail = cleanEmail;
+  window.localStorage.setItem("vouchly-pending-email", cleanEmail);
+  authNeedsConfirmation = false;
   authMessage = authMode === "signup" ? "Creating account..." : "Signing in...";
   render();
 
   const response =
     authMode === "signup"
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+      ? await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin
+          }
+        })
+      : await supabase.auth.signInWithPassword({ email: cleanEmail, password });
 
   if (response.error) {
-    authMessage = response.error.message;
+    const errorMessage = response.error.message || "";
+    const isConfirmationIssue =
+      response.error.code === "email_not_confirmed" ||
+      errorMessage.toLowerCase().includes("email not confirmed");
+
+    authNeedsConfirmation = isConfirmationIssue || authMode === "signin";
+    authMessage = isConfirmationIssue
+      ? "Please confirm your email first. Check your inbox/spam, then sign in again."
+      : authMode === "signin"
+        ? "Could not sign in. If you just created the account, confirm your email first or resend the confirmation email."
+        : errorMessage;
     render();
     return;
   }
 
   if (authMode === "signup" && !response.data.session) {
-    authMessage = "Account created. Check email if confirmation is enabled, then sign in.";
+    authNeedsConfirmation = true;
+    authMessage = `Account created for ${cleanEmail}. Check your inbox/spam and click the confirmation link, then sign in.`;
     authMode = "signin";
     render();
     return;
   }
 
+  session = response.data.session ?? session;
+  window.localStorage.removeItem("vouchly-pending-email");
+  authNeedsConfirmation = false;
+  lastAuthEmail = "";
   authMessage = "";
+
+  if (session?.user) {
+    await loadRemoteState();
+  }
+}
+
+async function resendConfirmationEmail() {
+  if (!lastAuthEmail) {
+    authMessage = "Enter your email first, then resend confirmation.";
+    authNeedsConfirmation = false;
+    render();
+    return;
+  }
+
+  authMessage = "Sending confirmation email...";
+  render();
+
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: lastAuthEmail,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  });
+
+  authNeedsConfirmation = true;
+  authMessage = error
+    ? error.message
+    : `Confirmation email sent to ${lastAuthEmail}. Check inbox/spam, confirm, then sign in.`;
+  render();
 }
 
 function bindEvents() {
@@ -1321,6 +1391,7 @@ function bindEvents() {
       if (action === "delete-customer") deleteCustomer(id);
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id);
+      if (action === "resend-confirmation") resendConfirmationEmail();
       if (action === "logout") logout();
     });
   });
