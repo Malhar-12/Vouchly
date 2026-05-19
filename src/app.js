@@ -649,7 +649,7 @@ function renderAuth() {
   const pendingPlan = plans.find((plan) => plan.id === pendingPlanId) ?? plans[0];
 
   return `
-    <main class="marketing-page">
+    <main class="marketing-page premium-landing">
       <nav class="marketing-nav">
         <a class="marketing-logo" href="#hero" aria-label="Vouchly home">
           <span>V</span>
@@ -667,8 +667,18 @@ function renderAuth() {
       </nav>
 
       <section class="marketing-hero" id="hero">
+        <div class="hero-orb hero-orb-one"></div>
+        <div class="hero-orb hero-orb-two"></div>
+        <div class="floating-review floating-review-left">
+          <strong>Rahul Kumar</strong>
+          <span>&#9733;&#9733;&#9733;&#9733;&#9733; Just reviewed on Google</span>
+        </div>
+        <div class="floating-review floating-review-right">
+          <strong>Priya Shah</strong>
+          <span>Review request opened 2 min ago</span>
+        </div>
         <div class="hero-copy">
-          <p class="hero-badge">First month free. No credit card needed.</p>
+          <p class="hero-badge"><span>&#10024;</span> First month free. No credit card needed.</p>
           <h1>Turn happy customers into <span>Google reviews.</span></h1>
           <p>
             Vouchly helps local businesses organize customers, schedule review requests,
@@ -679,7 +689,7 @@ function renderAuth() {
             <a class="ghost-button" href="#pricing">See plans -></a>
           </div>
         </div>
-        <div class="hero-dashboard-card" aria-label="Vouchly dashboard preview">
+        <div class="hero-dashboard-card dashboard-3d" aria-label="Vouchly dashboard preview">
           <div class="mock-topbar">
             <span></span><span></span><span></span>
             <strong>Vouchly Dashboard - My Salon</strong>
@@ -699,9 +709,33 @@ function renderAuth() {
         </div>
       </section>
 
+      <section class="proof-bar" aria-label="Vouchly proof">
+        <div class="proof-track">
+          <span>&#9733;&#9733;&#9733;&#9733;&#9733; 500+ businesses use Vouchly</span>
+          <span>Restaurants</span>
+          <span>Salons</span>
+          <span>Clinics</span>
+          <span>Hotels</span>
+          <span>Gyms</span>
+          <span>Garages</span>
+          <span>Coaching classes</span>
+          <span>10,000+ review requests tracked</span>
+          <span>&#9733;&#9733;&#9733;&#9733;&#9733; 500+ businesses use Vouchly</span>
+          <span>Restaurants</span>
+          <span>Salons</span>
+          <span>Clinics</span>
+          <span>Hotels</span>
+          <span>Gyms</span>
+          <span>Garages</span>
+          <span>Coaching classes</span>
+          <span>10,000+ review requests tracked</span>
+        </div>
+      </section>
+
       <section class="marketing-section showcase-section" id="how">
         <p class="eyebrow">How it works</p>
         <h2>Simple enough for any local business owner</h2>
+        <p class="section-sub">No technical setup. If the owner can use WhatsApp, they can understand this workflow.</p>
         <div class="marketing-grid four">
           ${marketingStep("1", "Set up profile", "Add your business name, type, city, and Google review link.")}
           ${marketingStep("2", "Add customers", "Add customers after a sale, visit, appointment, or service.")}
@@ -713,6 +747,7 @@ function renderAuth() {
       <section class="marketing-section showcase-section feature-pop-section" id="features">
         <p class="eyebrow">Features</p>
         <h2>Everything needed to start review automation</h2>
+        <p class="section-sub">Focused tools for reviews, follow-ups, and simple customer tracking. Nothing noisy.</p>
         <div class="marketing-grid three">
           ${marketingFeature("Customer list management", "Store customer name, contact, visit date, channel, and status.")}
           ${marketingFeature("Review request scheduling", "Create review reminders for WhatsApp, SMS, or email workflows.")}
@@ -771,7 +806,7 @@ function renderAuth() {
             ["Swimming Clubs", "🏊"],
             ["Internet Cafes", "🖥️"],
             ["Real Local Brands", "✨"]
-          ].map(([item, icon]) => `<span><b>${icon}</b>${item}</span>`).join("")}
+          ].map(([item]) => `<span>${item}</span>`).join("")}
         </div>
       </section>
 
@@ -781,6 +816,28 @@ function renderAuth() {
         <p class="section-sub">Start free. Upgrade when your customer volume grows.</p>
         <div class="pricing-grid">
           ${plans.map((plan) => renderMarketingPlan(plan)).join("")}
+        </div>
+      </section>
+
+      <section class="testimonial-section">
+        <p class="eyebrow">What owners want</p>
+        <h2>Less chasing. More reviews. Better trust.</h2>
+        <div class="testimonial-grid">
+          <article>
+            <span>&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <p>"I can add customers after each visit and see exactly who needs a reminder."</p>
+            <strong>Salon owner</strong>
+          </article>
+          <article>
+            <span>&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <p>"The templates save time and keep the review link ready in every request."</p>
+            <strong>Clinic admin</strong>
+          </article>
+          <article>
+            <span>&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <p>"It feels simple enough for my team, but professional enough for customers."</p>
+            <strong>Local business owner</strong>
+          </article>
         </div>
       </section>
 
