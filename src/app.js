@@ -173,7 +173,7 @@ const savedTaskTitleMap = {
 const savedCustomerStatusMap = {
   sent: "scheduled"
 };
-const customerListLimit = 50;
+const customerPageSize = 10;
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -197,7 +197,10 @@ let pendingPlanId = window.localStorage.getItem("vouchly-pending-plan") || "";
 let customerFilters = {
   query: "",
   status: "all",
-  channel: "all"
+  channel: "all",
+  dateMode: "all",
+  selectedDate: getTodayDateValue(),
+  page: 1
 };
 
 function loadLocalState() {
@@ -440,6 +443,19 @@ async function init() {
 
 function nextId(collection) {
   return collection.length ? Math.max(...collection.map((item) => Number(item.id))) + 1 : Date.now();
+}
+
+function getTodayDateValue() {
+  const date = new Date();
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function getDateValueFromToday(daysFromToday) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
 function escapeHtml(value = "") {
@@ -1036,7 +1052,10 @@ function metricCard(label, value, detail) {
 
 function renderCustomers() {
   const filteredCustomers = filterCustomers(state.customers);
-  const visibleCustomers = filteredCustomers.slice(0, customerListLimit);
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / customerPageSize));
+  const currentPage = Math.min(customerFilters.page, totalPages);
+  const startIndex = (currentPage - 1) * customerPageSize;
+  const visibleCustomers = filteredCustomers.slice(startIndex, startIndex + customerPageSize);
 
   return `
     <section class="panel">
@@ -1073,18 +1092,43 @@ function renderCustomers() {
           <option value="sms" ${customerFilters.channel === "sms" ? "selected" : ""}>SMS</option>
           <option value="email" ${customerFilters.channel === "email" ? "selected" : ""}>Email</option>
         </select>
+        <select data-filter="dateMode">
+          <option value="all" ${customerFilters.dateMode === "all" ? "selected" : ""}>All dates</option>
+          <option value="today" ${customerFilters.dateMode === "today" ? "selected" : ""}>Today</option>
+          <option value="yesterday" ${customerFilters.dateMode === "yesterday" ? "selected" : ""}>Yesterday</option>
+          <option value="custom" ${customerFilters.dateMode === "custom" ? "selected" : ""}>Choose date</option>
+        </select>
+        <input
+          data-filter="selectedDate"
+          type="date"
+          value="${escapeHtml(customerFilters.selectedDate)}"
+          ${customerFilters.dateMode === "custom" ? "" : "disabled"}
+        />
         <span class="result-count">
           Showing ${visibleCustomers.length} of ${filteredCustomers.length} customers
         </span>
       </div>
-      ${filteredCustomers.length > customerListLimit ? `<div class="list-note">Showing the latest ${customerListLimit}. Use search or filters to find older customers.</div>` : ""}
-      ${customerRows(visibleCustomers)}
+      <div class="list-note">
+        Serial numbers follow the selected date/search view, so today's list starts from 1 and yesterday's list has its own numbering.
+      </div>
+      ${customerRows(visibleCustomers, startIndex)}
+      ${customerPagination(currentPage, totalPages, filteredCustomers.length)}
     </section>
   `;
 }
 
 function filterCustomers(customers) {
   const query = customerFilters.query.trim().toLowerCase();
+  const today = getTodayDateValue();
+  const yesterday = getDateValueFromToday(-1);
+  const targetDate =
+    customerFilters.dateMode === "today"
+      ? today
+      : customerFilters.dateMode === "yesterday"
+        ? yesterday
+        : customerFilters.dateMode === "custom"
+          ? customerFilters.selectedDate
+          : "";
 
   return customers.filter((customer) => {
     const searchable = `${customer.name} ${customer.phone} ${customer.email}`.toLowerCase();
@@ -1093,12 +1137,27 @@ function filterCustomers(customers) {
       customerFilters.status === "all" || customer.status === customerFilters.status;
     const matchesChannel =
       customerFilters.channel === "all" || customer.channel === customerFilters.channel;
+    const matchesDate = !targetDate || customer.visitDate === targetDate;
 
-    return matchesQuery && matchesStatus && matchesChannel;
+    return matchesQuery && matchesStatus && matchesChannel && matchesDate;
   });
 }
 
-function customerRows(customers) {
+function customerPagination(currentPage, totalPages, totalCustomers) {
+  if (totalCustomers <= customerPageSize) {
+    return "";
+  }
+
+  return `
+    <div class="pagination-bar">
+      <button class="ghost-button small" data-action="customer-prev-page" ${currentPage <= 1 ? "disabled" : ""}>Previous</button>
+      <span>Page ${currentPage} of ${totalPages}</span>
+      <button class="ghost-button small" data-action="customer-next-page" ${currentPage >= totalPages ? "disabled" : ""}>Next</button>
+    </div>
+  `;
+}
+
+function customerRows(customers, startIndex = 0) {
   if (!customers.length) {
     return `<div class="empty-state">No customers match this view.</div>`;
   }
@@ -1108,6 +1167,7 @@ function customerRows(customers) {
       <table>
         <thead>
           <tr>
+            <th>Serial</th>
             <th>Name</th>
             <th>Contact</th>
             <th>Channel</th>
@@ -1119,8 +1179,9 @@ function customerRows(customers) {
         <tbody>
           ${customers
             .map(
-              (customer) => `
+              (customer, index) => `
                 <tr>
+                  <td>${startIndex + index + 1}</td>
                   <td>${escapeHtml(customer.name)}</td>
                   <td>${escapeHtml(customer.phone || customer.email || "Missing")}</td>
                   <td>${escapeHtml(customer.channel)}</td>
@@ -1748,6 +1809,8 @@ function bindEvents() {
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id);
       if (action === "resend-confirmation") resendConfirmationEmail();
+      if (action === "customer-prev-page") moveCustomerPage(-1);
+      if (action === "customer-next-page") moveCustomerPage(1);
       if (action === "logout") logout();
     });
   });
@@ -1758,7 +1821,8 @@ function bindEvents() {
     field.addEventListener("input", () => {
       customerFilters = {
         ...customerFilters,
-        [field.dataset.filter]: field.value
+        [field.dataset.filter]: field.value,
+        page: 1
       };
       render();
     });
@@ -1776,6 +1840,15 @@ function bindEvents() {
       }
     });
   });
+}
+
+function moveCustomerPage(direction) {
+  const totalPages = Math.max(1, Math.ceil(filterCustomers(state.customers).length / customerPageSize));
+  customerFilters = {
+    ...customerFilters,
+    page: Math.min(totalPages, Math.max(1, customerFilters.page + direction))
+  };
+  render();
 }
 
 function addCustomer(event) {

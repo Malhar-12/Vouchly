@@ -1117,7 +1117,7 @@ h2 {
   border-radius: 8px;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) auto;
+  grid-template-columns: minmax(220px, 1.35fr) minmax(140px, 0.65fr) minmax(140px, 0.65fr) minmax(140px, 0.65fr) minmax(150px, 0.7fr) auto;
   margin-bottom: 14px;
   padding: 12px;
 }
@@ -1135,6 +1135,25 @@ h2 {
 
 .list-note {
   margin-bottom: 12px;
+}
+
+.pagination-bar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.pagination-bar span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .settings-form {
@@ -1285,7 +1304,7 @@ textarea {
 
 table {
   border-collapse: collapse;
-  min-width: 720px;
+  min-width: 820px;
   width: 100%;
 }
 
