@@ -603,7 +603,7 @@ function render() {
   }
 
   if (!session?.user) {
-    app.innerHTML = renderAuth();
+    app.innerHTML = renderVouchlyLandingAuth();
     bindAuthEvents();
     return;
   }
@@ -1314,6 +1314,305 @@ function renderPlanDetail(plan) {
     <ul>
       ${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
     </ul>
+  `;
+}
+
+function renderVouchlyLandingAuth() {
+  const isSignup = authMode === "signup";
+  const pendingPlan = plans.find((plan) => plan.id === pendingPlanId) ?? plans[0];
+
+  return `
+    <main class="vouchly-landing">
+      <nav class="vouchly-nav">
+        <a class="vouchly-logo" href="#hero" aria-label="Vouchly home"><span>⭐</span>Vouchly</a>
+        <div class="vouchly-nav-links">
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div class="vouchly-nav-actions">
+          <a class="btn-ghost-nav" href="#auth-panel" data-auth-mode="signin">Sign in</a>
+          <a class="btn-fill-nav" href="#auth-panel" data-auth-mode="signup" data-plan-id="free">Start free →</a>
+        </div>
+      </nav>
+
+      <section class="vouchly-hero" id="hero">
+        <div class="hero-grid"></div>
+        <div class="hero-orb o1"></div>
+        <div class="hero-orb o2"></div>
+        <div class="hero-orb o3"></div>
+        ${vouchlyReviewBadge("rf1", "RK", "Rahul Kumar", "★★★★★ Just now · Google", "green")}
+        ${vouchlyReviewBadge("rf2", "PS", "Priya Shah", "★★★★★ 2 min ago · Google", "amber")}
+        ${vouchlyReviewBadge("rf3", "AM", "Amit Mehta", "★★★★★ 5 min ago · Google", "violet")}
+
+        <div class="vouchly-hero-copy">
+          <div class="hero-pill"><span>⭐</span> First month free · No credit card · Built for local businesses</div>
+          <h1>Turn happy customers into <span>Google reviews.</span></h1>
+          <p>Vouchly helps local businesses collect more Google reviews by organizing customers, scheduling review requests, managing message templates, and tracking follow-ups.</p>
+          <div class="hero-actions">
+            <a class="btn-hp" href="#auth-panel" data-auth-mode="signup" data-plan-id="free">✨ Start free month</a>
+            <a class="btn-hs" href="#pricing">See all plans →</a>
+          </div>
+        </div>
+
+        <div class="dashboard-stage">
+          <div class="hdash" id="dash3d">
+            <div class="dshell">
+              <div class="dbar">
+                <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+                <strong>Vouchly Dashboard — My Salon, Pune</strong>
+              </div>
+              <div class="dbody">
+                <article class="dst active"><strong>48</strong><span>⭐ Reviews this month</span><small>↑ +18 vs last month</small></article>
+                <article class="dst warm"><strong>142</strong><span>Customers added</span><small>↑ 89% open rate</small></article>
+                <article class="dst"><strong>87%</strong><span>Request response rate</span><small>↑ Above average</small></article>
+                <div class="dtbl">
+                  <div class="dtblh">Recent customers <span>12 pending follow-up</span></div>
+                  ${vouchlyMockCustomerRow("RK", "Rahul Kumar", "Today, 2:30pm", "Reviewed", "green")}
+                  ${vouchlyMockCustomerRow("PS", "Priya Shah", "Today, 11am", "Request sent", "amber")}
+                  ${vouchlyMockCustomerRow("AM", "Amit Mehta", "Yesterday", "Scheduled", "violet")}
+                  ${vouchlyMockCustomerRow("SJ", "Sunita Joshi", "2 days ago", "Follow-up due", "teal")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="proof-bar" aria-label="Vouchly proof">
+        <div class="proof-track">
+          ${vouchlyProofItems().concat(vouchlyProofItems()).map((item) => `<span>${item}</span>`).join("")}
+        </div>
+      </section>
+
+      <section class="vouchly-section how-section" id="how">
+        <p class="eyebrow">How it works</p>
+        <h2>Simple enough for any local business owner</h2>
+        <p class="section-sub">No tech knowledge needed. If you can use WhatsApp, you can use Vouchly.</p>
+        <div class="steps">
+          <div class="step-line"></div>
+          ${vouchlyStep("1", "🏪", "Set up your profile", "Add your business name and paste your Google review link. Takes 2 minutes.")}
+          ${vouchlyStep("2", "👥", "Add your customers", "After a purchase or visit, add the customer's name and number instantly.")}
+          ${vouchlyStep("3", "💬", "Schedule requests", "Preview your message, pick when to send it, and track the follow-up.")}
+          ${vouchlyStep("4", "📊", "Track everything", "See who reviewed, who's pending, and who needs a follow-up in one place.")}
+        </div>
+      </section>
+
+      <section class="vouchly-section feature-pop-section" id="features">
+        <p class="eyebrow">Features</p>
+        <h2>Everything you need. Nothing you don't.</h2>
+        <p class="section-sub">Built for busy shop owners, clinics, salons, hotels, and service teams.</p>
+        <div class="feats">
+          ${vouchlyFeature("📋", "Customer List Management", "Keep customers organized in one place. Add them quickly after a sale, visit, or appointment.", true)}
+          ${vouchlyFeature("🗓️", "Review Request Scheduling", "Schedule review requests at the right time, when your customer is happiest.")}
+          ${vouchlyFeature("💬", "Ready-made Message Templates", "WhatsApp, SMS, and email templates ready to use and easy to edit.")}
+          ${vouchlyFeature("🔔", "Follow-up Reminders", "Know who still needs a reminder before reviews are lost.")}
+          ${vouchlyFeature("🔗", "Google Review Link Storage", "Store the review link once. Vouchly adds it to every message automatically.")}
+          ${vouchlyFeature("📥", "CSV Data Backup", "Download customer and automation data in spreadsheet-friendly CSV format.")}
+        </div>
+      </section>
+
+      <section class="vouchly-section industries" id="industries">
+        <p class="eyebrow">Who uses Vouchly</p>
+        <h2>Built for every local business</h2>
+        <div class="industry-tags">
+          ${vouchlyIndustries().map(([emoji, item]) => `<span><b>${emoji}</b>${item}</span>`).join("")}
+        </div>
+      </section>
+
+      <section class="vouchly-section pricing-section" id="pricing">
+        <p class="eyebrow">Pricing</p>
+        <h2>Simple, honest pricing</h2>
+        <p class="section-sub">Start free. Upgrade only when you grow. No hidden charges, no surprises.</p>
+        <div class="pricing-grid vouchly-pricing-grid">
+          ${plans.map((plan) => vouchlyMarketingPlan(plan)).join("")}
+        </div>
+      </section>
+
+      <section class="testimonial-section">
+        <p class="eyebrow">What business owners say</p>
+        <h2>They got more reviews. Now it's your turn.</h2>
+        <div class="testimonial-grid">
+          ${vouchlyTestimonial("Neha Patil", "Salon owner", "Within the first month I got more Google reviews without chasing customers manually.")}
+          ${vouchlyTestimonial("Rahul Desai", "Garage owner", "I just add customers after service. The follow-up list keeps everything clear.")}
+          ${vouchlyTestimonial("Dr. Kavita Joshi", "Clinic owner", "The setup is simple enough for my front desk team and professional enough for patients.")}
+        </div>
+      </section>
+
+      <section class="vouchly-auth-section" id="auth-panel">
+        <div class="auth-trust-panel">
+          <span class="brand-mark">⭐</span>
+          <h2>More reviews. More customers. More trust.</h2>
+          <p>Built for local businesses worldwide that want a simple review follow-up system without technical setup.</p>
+          <ul>
+            <li>No technical knowledge needed</li>
+            <li>First month free</li>
+            <li>Private workspace with Supabase login</li>
+            <li>Works on mobile and desktop</li>
+          </ul>
+        </div>
+
+        <section class="auth-card marketing-auth-card vouchly-auth-card">
+          <div class="auth-tabs">
+            <button class="${!isSignup ? "active" : ""}" data-auth-mode="signin" type="button">Sign in</button>
+            <button class="${isSignup ? "active" : ""}" data-auth-mode="signup" type="button">Create account</button>
+          </div>
+          <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
+          <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
+          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${escapeHtml(pendingPlan.price)}</small></div>` : ""}
+          <form id="auth-form" class="auth-form">
+            <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
+            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
+            <button class="primary-button" type="submit">${isSignup ? "Create free account →" : "Sign in to Vouchly →"}</button>
+          </form>
+          ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
+          ${authNeedsConfirmation && lastAuthEmail ? `<button class="ghost-button resend-button" data-action="resend-confirmation" type="button">Resend confirmation email</button>` : ""}
+          <button class="link-button" data-auth-mode="${isSignup ? "signin" : "signup"}">
+            ${isSignup ? "Already have an account? Sign in" : "New business? Start free"}
+          </button>
+        </section>
+      </section>
+
+      <footer class="marketing-footer">
+        <strong>⭐ Vouchly</strong>
+        <span>Review growth software for local businesses worldwide</span>
+      </footer>
+    </main>
+  `;
+}
+
+function vouchlyReviewBadge(position, initials, name, meta, tone) {
+  return `
+    <div class="review-float ${position}">
+      <div class="review-badge">
+        <div class="review-avatar ${tone}">${initials}</div>
+        <div><strong>${name}</strong><span>${meta}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function vouchlyMockCustomerRow(initials, name, date, status, tone) {
+  return `
+    <div class="crow">
+      <span class="cav ${tone}">${initials}</span>
+      <strong>${name}</strong>
+      <small>${date}</small>
+      <em>${status}</em>
+    </div>
+  `;
+}
+
+function vouchlyProofItems() {
+  return [
+    "★★★★★ 500+ businesses trust Vouchly",
+    "🍽️ Restaurants",
+    "💇 Salons",
+    "🏥 Clinics",
+    "🦷 Dentists",
+    "🏨 Hotels",
+    "💪 Gyms",
+    "📚 Coaching Classes",
+    "🚗 Garages",
+    "10,000+ review requests tracked"
+  ];
+}
+
+function vouchlyStep(number, emoji, title, body) {
+  return `
+    <article class="step">
+      <span class="step-icon">${emoji}</span>
+      <small>Step ${number}</small>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+    </article>
+  `;
+}
+
+function vouchlyFeature(emoji, title, body, highlighted = false) {
+  return `
+    <article class="feature-card ${highlighted ? "highlight" : ""}">
+      <span class="feature-icon">${emoji}</span>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+      ${highlighted ? `<small>Most used</small>` : ""}
+    </article>
+  `;
+}
+
+function vouchlyIndustries() {
+  return [
+    ["🍽️", "Restaurants"],
+    ["☕", "Cafes"],
+    ["💇", "Salons"],
+    ["🏥", "Clinics"],
+    ["🦷", "Dentists"],
+    ["🏨", "Hotels"],
+    ["🌴", "Resorts"],
+    ["🥐", "Bakeries"],
+    ["🍔", "Fast Food"],
+    ["🚗", "Garages"],
+    ["🧽", "Car Wash"],
+    ["🏍️", "Bike Repair"],
+    ["📚", "Coaching Classes"],
+    ["✏️", "Tuition Centers"],
+    ["📱", "Mobile Repair"],
+    ["🔌", "Electronics Stores"],
+    ["🛋️", "Furniture Stores"],
+    ["✈️", "Travel Agencies"],
+    ["🎉", "Event Planners"],
+    ["💍", "Wedding Photographers"],
+    ["💪", "Gyms"],
+    ["🧘", "Yoga Studios"],
+    ["🧖", "Spas"],
+    ["🎨", "Tattoo Studios"],
+    ["🐾", "Pet Clinics"],
+    ["🐶", "Pet Grooming"],
+    ["💊", "Pharmacies"],
+    ["🧪", "Diagnostic Labs"],
+    ["🏠", "Real Estate"],
+    ["📦", "Packers & Movers"],
+    ["📸", "Photographers"],
+    ["🧹", "Cleaning Services"],
+    ["🛡️", "Pest Control"],
+    ["🔧", "Service Providers"],
+    ["🍱", "Cloud Kitchens"],
+    ["🍸", "Bars & Lounges"],
+    ["💼", "Coworking Spaces"]
+  ];
+}
+
+function vouchlyMarketingPlan(plan) {
+  const isGrowth = plan.id === "growth";
+  const displayPrice = plan.price
+    .replace("INR 0 / first month", "₹0 / first month")
+    .replace("INR 999 / month", "₹999 / month")
+    .replace("INR 2,999 / month", "₹2,999 / month")
+    .replace("INR 7,999 / month", "₹7,999 / month");
+
+  return `
+    <article class="marketing-plan ${isGrowth ? "popular" : ""}">
+      ${isGrowth ? `<span class="popular-pill">⭐ Most popular</span>` : ""}
+      <span>${escapeHtml(plan.name)}</span>
+      <strong>${escapeHtml(displayPrice)}</strong>
+      <p>${escapeHtml(plan.fit)}</p>
+      <small>${escapeHtml(plan.limits)}</small>
+      <ul>${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <a class="${isGrowth ? "primary-button" : "ghost-button"} small" href="#auth-panel" data-auth-mode="signup" data-plan-id="${escapeHtml(plan.id)}">
+        ${plan.id === "free" ? "Start free month" : `Get ${escapeHtml(plan.name)}`}
+      </a>
+    </article>
+  `;
+}
+
+function vouchlyTestimonial(name, role, text) {
+  return `
+    <article>
+      <span>★★★★★</span>
+      <p>"${escapeHtml(text)}"</p>
+      <strong>${escapeHtml(name)}</strong>
+      <small>${escapeHtml(role)}</small>
+    </article>
   `;
 }
 
