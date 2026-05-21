@@ -194,14 +194,7 @@ let syncStatus = "Starting";
 let syncMessage = "Checking account...";
 let saveTimer = null;
 let pendingPlanId = window.localStorage.getItem("vouchly-pending-plan") || "";
-let customerFilters = {
-  query: "",
-  status: "all",
-  channel: "all",
-  dateMode: "all",
-  selectedDate: getTodayDateValue(),
-  page: 1
-};
+let customerFilters = defaultCustomerFilters();
 
 function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
@@ -456,6 +449,17 @@ function getDateValueFromToday(daysFromToday) {
   date.setDate(date.getDate() + daysFromToday);
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function defaultCustomerFilters() {
+  return {
+    query: "",
+    status: "all",
+    channel: "all",
+    dateMode: "all",
+    selectedDate: getTodayDateValue(),
+    page: 1
+  };
 }
 
 function escapeHtml(value = "") {
@@ -1107,6 +1111,7 @@ function renderCustomers() {
         <span class="result-count">
           Showing ${visibleCustomers.length} of ${filteredCustomers.length} customers
         </span>
+        <button class="ghost-button small" data-action="clear-customer-filters" type="button">Clear filters</button>
       </div>
       <div class="list-note">
         Serial numbers follow the selected date/search view, so today's list starts from 1 and yesterday's list has its own numbering.
@@ -1811,6 +1816,7 @@ function bindEvents() {
       if (action === "resend-confirmation") resendConfirmationEmail();
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
+      if (action === "clear-customer-filters") clearCustomerFilters();
       if (action === "logout") logout();
     });
   });
@@ -1818,14 +1824,17 @@ function bindEvents() {
   document.querySelector("#customer-form")?.addEventListener("submit", addCustomer);
   document.querySelector("#settings-form")?.addEventListener("submit", saveSettings);
   document.querySelectorAll("[data-filter]").forEach((field) => {
-    field.addEventListener("input", () => {
+    const updateFilter = () => {
       customerFilters = {
         ...customerFilters,
         [field.dataset.filter]: field.value,
         page: 1
       };
       render();
-    });
+    };
+
+    field.addEventListener("input", updateFilter);
+    field.addEventListener("change", updateFilter);
   });
   document.querySelectorAll('input[name="plan"]').forEach((input) => {
     input.addEventListener("change", () => {
@@ -1848,6 +1857,11 @@ function moveCustomerPage(direction) {
     ...customerFilters,
     page: Math.min(totalPages, Math.max(1, customerFilters.page + direction))
   };
+  render();
+}
+
+function clearCustomerFilters() {
+  customerFilters = defaultCustomerFilters();
   render();
 }
 
