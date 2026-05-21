@@ -168,7 +168,8 @@ const storageKey = "vouchly-universal-state-v2";
 const savedTaskTitleMap = {
   "Send review request": "Review request",
   "Review follow-up": "Review reminder",
-  "Bulk review request": "Review request batch"
+  "Bulk review request": "Review request",
+  "Review request batch": "Review request"
 };
 const savedCustomerStatusMap = {
   sent: "scheduled"
@@ -228,10 +229,7 @@ function mergeState(nextState = {}) {
       ...customer,
       status: savedCustomerStatusMap[customer.status] ?? customer.status
     })),
-    tasks: tasks.map((task) => ({
-      ...task,
-      title: savedTaskTitleMap[task.title] ?? task.title
-    })),
+    tasks: normalizeTasks(tasks),
     templates: nextState.templates ?? defaultState.templates,
     deletedCustomerKeys
   };
@@ -374,7 +372,7 @@ function mergeWorkspaceStates(remoteState, localState) {
     customers: mergeUniqueRecords(remoteState.customers, localState.customers, customerRecordKey).filter(
       (customer) => !deletedCustomerKeys.includes(customerRecordKey(customer))
     ),
-    tasks: mergeUniqueRecords(remoteState.tasks, localState.tasks, taskRecordKey),
+    tasks: normalizeTasks(mergeUniqueRecords(remoteState.tasks, localState.tasks, taskRecordKey)),
     templates: localState.templates?.length ? localState.templates : remoteState.templates,
     deletedCustomerKeys
   };
@@ -405,6 +403,46 @@ function customerRecordKey(customer) {
 
 function taskRecordKey(task) {
   return `${task.title}|${task.customerName}|${task.channel}|${task.dueAt}`.toLowerCase();
+}
+
+function taskDayKey(task) {
+  const dueDate = String(task.dueAt ?? "").slice(0, 10);
+  return `${task.title}|${task.customerName}|${task.channel}|${dueDate}|${task.status}`.toLowerCase();
+}
+
+function normalizeTasks(tasks = []) {
+  const seen = new Set();
+  const normalizedTasks = [];
+
+  tasks.forEach((task) => {
+    const normalizedTask = {
+      ...task,
+      title: savedTaskTitleMap[task.title] ?? task.title
+    };
+    const key = taskDayKey(normalizedTask);
+
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+    normalizedTasks.push(normalizedTask);
+  });
+
+  return normalizedTasks;
+}
+
+function hasScheduledRequestForCustomer(tasks, customer, dueAt) {
+  const targetDay = String(dueAt).slice(0, 10);
+
+  return tasks.some(
+    (task) =>
+      task.title === "Review request" &&
+      task.customerName === customer.name &&
+      task.channel === customer.channel &&
+      String(task.dueAt ?? "").slice(0, 10) === targetDay &&
+      task.status !== "done"
+  );
 }
 
 async function init() {
@@ -523,24 +561,34 @@ function queueReviewRequest(customerId) {
 
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 1);
+  const dueAt = `${dueDate.toISOString().slice(0, 10)} 17:00`;
 
-  setState((current) => ({
-    ...current,
-    customers: current.customers.map((entry) =>
-      entry.id === customerId ? { ...entry, status: "scheduled" } : entry
-    ),
-    tasks: [
-      {
-        id: nextId(current.tasks),
-        title: "Review reminder",
-        customerName: customer.name,
-        channel: customer.channel,
-        dueAt: `${dueDate.toISOString().slice(0, 10)} 17:00`,
-        status: "scheduled"
-      },
-      ...current.tasks
-    ]
-  }));
+  setState((current) => {
+    if (hasScheduledRequestForCustomer(current.tasks, customer, dueAt)) {
+      appMessage = `${customer.name} already has a scheduled review request.`;
+      return current;
+    }
+
+    appMessage = `${customer.name} review request scheduled.`;
+
+    return {
+      ...current,
+      customers: current.customers.map((entry) =>
+        entry.id === customerId ? { ...entry, status: "scheduled" } : entry
+      ),
+      tasks: [
+        {
+          id: nextId(current.tasks),
+          title: "Review request",
+          customerName: customer.name,
+          channel: customer.channel,
+          dueAt,
+          status: "scheduled"
+        },
+        ...current.tasks
+      ]
+    };
+  });
 }
 
 function deleteCustomer(customerId) {
@@ -983,7 +1031,7 @@ function renderHeader() {
       <div class="top-actions">
         <span class="account-pill">${escapeHtml(session.user.email)}</span>
         <button class="ghost-button" data-action="logout">Logout</button>
-        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Send requests</button>` : ""}
+        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Schedule pending</button>` : ""}
       </div>
     </header>
   `;
@@ -1880,17 +1928,6 @@ function addCustomer(event) {
         status: "pending"
       },
       ...current.customers
-    ],
-    tasks: [
-      {
-        id: nextId(current.tasks),
-        title: "Review request",
-        customerName: customer.name,
-        channel: customer.channel,
-        dueAt: `${customer.visitDate} 11:00`,
-        status: "scheduled"
-      },
-      ...current.tasks
     ]
   }));
 }
@@ -1936,22 +1973,39 @@ function saveSettings(event) {
 
 function bulkQueueRequests() {
   const pendingCustomers = state.customers.filter((customer) => customer.status === "pending");
-  const tasks = pendingCustomers.map((customer, index) => ({
-    id: Date.now() + index,
-    title: "Review request batch",
-    customerName: customer.name,
-    channel: customer.channel,
-    dueAt: `${new Date().toISOString().slice(0, 10)} 18:00`,
-    status: "scheduled"
-  }));
+  const todayDueAt = `${getTodayDateValue()} 18:00`;
 
-  setState((current) => ({
-    ...current,
-    customers: current.customers.map((customer) =>
-      customer.status === "pending" ? { ...customer, status: "scheduled" } : customer
-    ),
-    tasks: [...tasks, ...current.tasks]
-  }));
+  setState((current) => {
+    const customersToSchedule = pendingCustomers.filter(
+      (customer) => !hasScheduledRequestForCustomer(current.tasks, customer, todayDueAt)
+    );
+
+    if (!customersToSchedule.length) {
+      appMessage = "No pending customers need scheduling right now.";
+      return current;
+    }
+
+    const tasks = customersToSchedule.map((customer, index) => ({
+      id: Date.now() + index,
+      title: "Review request",
+      customerName: customer.name,
+      channel: customer.channel,
+      dueAt: todayDueAt,
+      status: "scheduled"
+    }));
+
+    appMessage = `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} scheduled.`;
+
+    return {
+      ...current,
+      customers: current.customers.map((customer) =>
+        customersToSchedule.some((entry) => entry.id === customer.id)
+          ? { ...customer, status: "scheduled" }
+          : customer
+      ),
+      tasks: normalizeTasks([...tasks, ...current.tasks])
+    };
+  });
 }
 
 function completeTask(taskId) {
