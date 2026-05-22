@@ -196,6 +196,8 @@ let syncMessage = "Checking account...";
 let saveTimer = null;
 let pendingPlanId = window.localStorage.getItem("vouchly-pending-plan") || "";
 let customerFilters = defaultCustomerFilters();
+let messagePreviewCustomerId = null;
+let editingCustomerId = null;
 
 function loadLocalState() {
   const stored = window.localStorage.getItem(storageKey);
@@ -559,6 +561,7 @@ function queueReviewRequest(customerId) {
     return;
   }
 
+  messagePreviewCustomerId = null;
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 1);
   const dueAt = `${dueDate.toISOString().slice(0, 10)} 17:00`;
@@ -705,6 +708,8 @@ function render() {
         ${renderSyncBanner()}
         ${renderAppMessage()}
         ${setupComplete ? renderView() : renderOnboarding()}
+        ${renderMessagePreview()}
+        ${renderCustomerEditor()}
       </main>
     </div>
   `;
@@ -1242,7 +1247,13 @@ function customerRows(customers, startIndex = 0) {
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(customer.status)}</span></td>
                   <td class="row-actions">
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview msg</button>
-                    <button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule</button>
+                    <button class="ghost-button small" data-action="edit-customer" data-id="${customer.id}">Edit</button>
+                    ${
+                      customer.status === "reviewed"
+                        ? `<span class="row-note">Reviewed</span>`
+                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule</button>
+                           <button class="primary-button small" data-action="mark-reviewed" data-id="${customer.id}">Mark reviewed</button>`
+                    }
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
                   </td>
                 </tr>
@@ -1251,6 +1262,108 @@ function customerRows(customers, startIndex = 0) {
             .join("")}
         </tbody>
       </table>
+    </div>
+  `;
+}
+
+function renderMessagePreview() {
+  const customer = state.customers.find((entry) => entry.id === messagePreviewCustomerId);
+  if (!customer) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-action="close-preview">
+      <section class="modal-card message-modal" role="dialog" aria-modal="true" aria-labelledby="message-preview-title">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Message preview</p>
+            <h2 id="message-preview-title">${escapeHtml(customer.name)}</h2>
+          </div>
+          <button class="ghost-button small" data-action="close-preview" type="button">Close</button>
+        </div>
+        <p class="modal-meta">
+          Channel: <strong>${escapeHtml(customer.channel)}</strong>. The Google review link is inserted from Settings.
+        </p>
+        <textarea class="message-preview" readonly>${escapeHtml(buildMessage(customer))}</textarea>
+        <div class="modal-actions">
+          <button class="primary-button" data-action="copy-preview-message" type="button">Copy message</button>
+          <button class="ghost-button" data-action="queue" data-id="${customer.id}" type="button">Schedule request</button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function renderCustomerEditor() {
+  const customer = state.customers.find((entry) => entry.id === editingCustomerId);
+  if (!customer) {
+    return "";
+  }
+
+  return `
+    <div class="modal-backdrop" data-action="close-customer-editor">
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="customer-editor-title">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Customer</p>
+            <h2 id="customer-editor-title">Edit customer</h2>
+          </div>
+          <button class="ghost-button small" data-action="close-customer-editor" type="button">Close</button>
+        </div>
+        <form class="customer-editor-form" id="customer-editor-form">
+          <label>
+            Name
+            <input name="name" value="${escapeHtml(customer.name)}" required />
+          </label>
+          <label>
+            Phone
+            <input name="phone" value="${escapeHtml(customer.phone)}" />
+          </label>
+          <label>
+            Email
+            <input name="email" type="email" value="${escapeHtml(customer.email)}" />
+          </label>
+          <label>
+            Channel
+            <select name="channel">
+              ${["whatsapp", "sms", "email"]
+                .map(
+                  (channel) =>
+                    `<option value="${channel}" ${customer.channel === channel ? "selected" : ""}>${escapeHtml(channel)}</option>`
+                )
+                .join("")}
+            </select>
+          </label>
+          <label>
+            Visit date
+            <input name="visitDate" type="date" value="${escapeHtml(customer.visitDate)}" required />
+          </label>
+          <label>
+            Source
+            <input name="source" value="${escapeHtml(customer.source)}" />
+          </label>
+          <label>
+            Review status
+            <select name="status">
+              ${["pending", "scheduled", "reviewed"]
+                .map(
+                  (status) =>
+                    `<option value="${status}" ${customer.status === status ? "selected" : ""}>${escapeHtml(status)}</option>`
+                )
+                .join("")}
+            </select>
+          </label>
+          <div class="modal-actions wide">
+            <button class="primary-button" type="submit">Save customer</button>
+            ${
+              customer.status === "reviewed"
+                ? ""
+                : `<button class="ghost-button" data-action="mark-reviewed" data-id="${customer.id}" type="button">Mark reviewed</button>`
+            }
+          </div>
+        </form>
+      </section>
     </div>
   `;
 }
@@ -1861,6 +1974,11 @@ function bindEvents() {
       if (action === "delete-customer") deleteCustomer(id);
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id);
+      if (action === "copy-preview-message") copyPreviewMessage();
+      if (action === "close-preview") closeMessagePreview();
+      if (action === "edit-customer") editCustomer(id);
+      if (action === "close-customer-editor") closeCustomerEditor();
+      if (action === "mark-reviewed") markCustomerReviewed(id);
       if (action === "resend-confirmation") resendConfirmationEmail();
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
@@ -1870,7 +1988,11 @@ function bindEvents() {
   });
 
   document.querySelector("#customer-form")?.addEventListener("submit", addCustomer);
+  document.querySelector("#customer-editor-form")?.addEventListener("submit", saveCustomerEdits);
   document.querySelector("#settings-form")?.addEventListener("submit", saveSettings);
+  document.querySelectorAll(".modal-card").forEach((modal) => {
+    modal.addEventListener("click", (event) => event.stopPropagation());
+  });
   document.querySelectorAll("[data-filter]").forEach((field) => {
     const updateFilter = () => {
       customerFilters = {
@@ -2023,7 +2145,99 @@ function previewMessage(customerId) {
     return;
   }
 
-  window.alert(buildMessage(customer));
+  messagePreviewCustomerId = customerId;
+  render();
+}
+
+function closeMessagePreview() {
+  messagePreviewCustomerId = null;
+  render();
+}
+
+async function copyPreviewMessage() {
+  const customer = state.customers.find((entry) => entry.id === messagePreviewCustomerId);
+  if (!customer) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(buildMessage(customer));
+    appMessage = `${customer.name} message copied. Paste it into ${customer.channel}.`;
+  } catch {
+    appMessage = "Copy was blocked by the browser. Select the message and copy it manually.";
+  }
+
+  closeMessagePreview();
+}
+
+function editCustomer(customerId) {
+  if (!state.customers.some((entry) => entry.id === customerId)) {
+    return;
+  }
+
+  editingCustomerId = customerId;
+  render();
+}
+
+function closeCustomerEditor() {
+  editingCustomerId = null;
+  render();
+}
+
+function saveCustomerEdits(event) {
+  event.preventDefault();
+  const form = Object.fromEntries(new FormData(event.currentTarget).entries());
+  const currentCustomer = state.customers.find((entry) => entry.id === editingCustomerId);
+  if (!currentCustomer) {
+    return;
+  }
+
+  appMessage = `${form.name} customer details saved.`;
+  const customerWasMarkedReviewed = form.status === "reviewed";
+  editingCustomerId = null;
+
+  setState((current) => ({
+    ...current,
+    customers: current.customers.map((customer) =>
+      customer.id === editingCustomerId ? { ...customer, ...form } : customer
+    ),
+    tasks: current.tasks.map((task) => {
+      const belongsToCustomer = task.customerName === currentCustomer.name;
+      if (!belongsToCustomer) {
+        return task;
+      }
+
+      return {
+        ...task,
+        customerName: form.name,
+        channel: form.channel,
+        status: customerWasMarkedReviewed && task.status === "scheduled" ? "done" : task.status
+      };
+    })
+  }));
+}
+
+function markCustomerReviewed(customerId) {
+  const customer = state.customers.find((entry) => entry.id === customerId);
+  if (!customer) {
+    return;
+  }
+
+  appMessage = `${customer.name} marked reviewed.`;
+  messagePreviewCustomerId = null;
+  editingCustomerId = null;
+
+  setState((current) => ({
+    ...current,
+    customers: current.customers.map((entry) =>
+      entry.id === customerId ? { ...entry, status: "reviewed" } : entry
+    ),
+    tasks: current.tasks.map((task) =>
+      task.customerName === customer.name && task.status === "scheduled"
+        ? { ...task, status: "done" }
+        : task
+    )
+  }));
 }
 
 async function logout() {
