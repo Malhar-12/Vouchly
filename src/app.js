@@ -80,23 +80,23 @@ const plans = [
   {
     id: "starter",
     name: "Starter",
-    price: "INR 999 / month",
-    fit: "For small shops or solo businesses that want organized review tracking.",
+    price: "INR 499 / month",
+    fit: "For small shops that want affordable review tracking and light automation.",
     limits: "Up to 500 customers/month",
     includes: ["Customer list", "Review request tracking", "CSV data backup", "100 automated review requests"]
   },
   {
     id: "growth",
     name: "Growth",
-    price: "INR 2,999 / month",
-    fit: "Main plan for local businesses that need real follow-up automation.",
+    price: "INR 1,499 / month",
+    fit: "Main plan for growing local businesses that need follow-up automation.",
     limits: "Up to 1,500 customers/month",
     includes: ["Everything in Starter", "Automation tasks", "Editable message templates", "Review request sending workflow", "Lead follow-up"]
   },
   {
     id: "pro",
     name: "Pro",
-    price: "INR 7,999 / month",
+    price: "INR 4,999 / month",
     fit: "For high-volume teams, multi-location services, and agencies.",
     limits: "Up to 5,000 customers/month",
     includes: ["Everything in Growth", "Priority support", "Future multi-user controls", "Advanced reporting"]
@@ -1259,6 +1259,7 @@ function customerRows(customers, startIndex = 0) {
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(customer.status)}</span></td>
                   <td class="row-actions">
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview msg</button>
+                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}">WhatsApp</button>
                     <button class="ghost-button small" data-action="edit-customer" data-id="${customer.id}">Edit</button>
                     ${
                       customer.status === "reviewed"
@@ -1300,6 +1301,7 @@ function renderMessagePreview() {
         <textarea class="message-preview" readonly>${escapeHtml(buildMessage(customer))}</textarea>
         <div class="modal-actions">
           <button class="primary-button" data-action="copy-preview-message" type="button">Copy message</button>
+          <button class="whatsapp-button" data-action="open-whatsapp-message" data-id="${customer.id}" type="button">Open WhatsApp</button>
           <button class="ghost-button" data-action="queue" data-id="${customer.id}" type="button">Schedule request</button>
         </div>
       </section>
@@ -2080,6 +2082,7 @@ function bindEvents() {
       if (action === "delete-customer") deleteCustomer(id);
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id);
+      if (action === "open-whatsapp-message") openWhatsAppMessage(id);
       if (action === "copy-preview-message") copyPreviewMessage();
       if (action === "close-preview") closeMessagePreview();
       if (action === "edit-customer") editCustomer(id);
@@ -2286,6 +2289,46 @@ function previewMessage(customerId) {
 function closeMessagePreview() {
   messagePreviewCustomerId = null;
   render();
+}
+
+function normalizePhoneForWhatsApp(phone = "") {
+  const digits = String(phone).replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+
+  return digits;
+}
+
+async function openWhatsAppMessage(customerId) {
+  const customer = state.customers.find((entry) => entry.id === customerId);
+  if (!customer) {
+    return;
+  }
+
+  const phone = normalizePhoneForWhatsApp(customer.phone);
+  const message = buildMessage(customer);
+
+  try {
+    await navigator.clipboard.writeText(message);
+  } catch {
+    // Opening WhatsApp still works; copy is a helpful fallback when allowed.
+  }
+
+  if (!phone) {
+    appMessage = `${customer.name} has no phone number. Message copied if browser allowed it.`;
+    render();
+    return;
+  }
+
+  appMessage = `${customer.name} WhatsApp message opened. Review the text before sending.`;
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  closeMessagePreview();
 }
 
 async function copyPreviewMessage() {

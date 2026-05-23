@@ -997,7 +997,8 @@ h2 {
 
 .primary-button,
 .ghost-button,
-.danger-button {
+.danger-button,
+.whatsapp-button {
   align-items: center;
   border-radius: 8px;
   cursor: pointer;
@@ -1029,6 +1030,16 @@ h2 {
   background: #fff6f4;
   border: 1px solid #f0c7bf;
   color: var(--danger);
+}
+
+.whatsapp-button {
+  background: #e7f8ef;
+  border: 1px solid #bfe8d2;
+  color: #0b7a42;
+}
+
+.whatsapp-button:hover {
+  background: #d7f2e4;
 }
 
 .small {
