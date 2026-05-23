@@ -629,6 +629,46 @@ select {
   line-height: 1;
 }
 
+.price-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.price-stack strong {
+  display: block;
+}
+
+.price-stack em {
+  color: var(--brand-strong);
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.price-offer-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.price-offer-row del {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.sale-pill {
+  background: #fff2df;
+  border: 1px solid #f4cf9f;
+  border-radius: 999px;
+  color: #9a530d;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 5px 9px;
+  text-transform: uppercase;
+}
+
 .marketing-plan small {
   color: var(--brand-strong);
   font-weight: 900;
@@ -1313,6 +1353,19 @@ button:disabled {
 .plan-card strong {
   color: var(--ink);
   font-size: 1.35rem;
+}
+
+.plan-card .price-stack {
+  gap: 5px;
+}
+
+.plan-card .price-offer-row del {
+  font-size: 0.82rem;
+}
+
+.plan-card .sale-pill {
+  font-size: 0.64rem;
+  padding: 4px 7px;
 }
 
 .plan-card small {

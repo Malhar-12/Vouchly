@@ -81,6 +81,8 @@ const plans = [
     id: "starter",
     name: "Starter",
     price: "INR 499 / month",
+    originalPrice: "INR 999 / month",
+    offer: "Launch 50% off",
     fit: "For small shops that want affordable review tracking and light automation.",
     limits: "Up to 500 customers/month",
     includes: ["Customer list", "Review request tracking", "CSV data backup", "100 automated review requests"]
@@ -89,6 +91,8 @@ const plans = [
     id: "growth",
     name: "Growth",
     price: "INR 1,499 / month",
+    originalPrice: "INR 2,999 / month",
+    offer: "Launch 50% off",
     fit: "Main plan for growing local businesses that need follow-up automation.",
     limits: "Up to 1,500 customers/month",
     includes: ["Everything in Starter", "Automation tasks", "Editable message templates", "Review request sending workflow", "Lead follow-up"]
@@ -97,6 +101,8 @@ const plans = [
     id: "pro",
     name: "Pro",
     price: "INR 4,999 / month",
+    originalPrice: "INR 9,999 / month",
+    offer: "Launch 50% off",
     fit: "For high-volume teams, multi-location services, and agencies.",
     limits: "Up to 5,000 customers/month",
     includes: ["Everything in Growth", "Priority support", "Future multi-user controls", "Advanced reporting"]
@@ -945,7 +951,7 @@ function renderAuth() {
           </div>
           <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
           <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
-          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${escapeHtml(pendingPlan.price)}</small></div>` : ""}
+          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${pendingPlan.originalPrice ? `${escapeHtml(pendingPlan.offer)}: ${escapeHtml(pendingPlan.price)}` : escapeHtml(pendingPlan.price)}</small></div>` : ""}
           <form id="auth-form" class="auth-form">
             <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
             <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
@@ -1001,7 +1007,7 @@ function renderMarketingPlan(plan) {
     <article class="marketing-plan ${isGrowth ? "popular" : ""}">
       ${isGrowth ? `<span class="popular-pill">Most popular</span>` : ""}
       <span>${escapeHtml(plan.name)}</span>
-      <strong>${escapeHtml(plan.price)}</strong>
+      ${renderPlanPrice(plan)}
       <p>${escapeHtml(plan.fit)}</p>
       <small>${escapeHtml(plan.limits)}</small>
       <ul>
@@ -1011,6 +1017,20 @@ function renderMarketingPlan(plan) {
         ${plan.id === "free" ? "Start free month" : `Choose ${escapeHtml(plan.name)}`}
       </a>
     </article>
+  `;
+}
+
+function renderPlanPrice(plan) {
+  return `
+    <div class="price-stack">
+      ${
+        plan.originalPrice
+          ? `<div class="price-offer-row"><del>${escapeHtml(plan.originalPrice)}</del><span class="sale-pill">${escapeHtml(plan.offer ?? "50% off")}</span></div>`
+          : ""
+      }
+      <strong>${escapeHtml(plan.price)}</strong>
+      ${plan.originalPrice ? `<em>Limited launch price</em>` : ""}
+    </div>
   `;
 }
 
@@ -1605,7 +1625,7 @@ function renderSettings(isOnboarding = false) {
                   <label class="plan-card ${selectedPlan.id === plan.id ? "selected" : ""}">
                     <input name="plan" type="radio" value="${escapeHtml(plan.id)}" ${selectedPlan.id === plan.id ? "checked" : ""} />
                     <span>${escapeHtml(plan.name)}</span>
-                    <strong>${escapeHtml(plan.price)}</strong>
+                    ${renderPlanPrice(plan)}
                     <small>${escapeHtml(plan.fit)}</small>
                   </label>
                 `
@@ -1645,6 +1665,7 @@ function renderSettings(isOnboarding = false) {
 function renderPlanDetail(plan) {
   return `
     <strong>${escapeHtml(plan.name)} includes</strong>
+    ${plan.originalPrice ? `<span>${escapeHtml(plan.offer ?? "50% off")}: <del>${escapeHtml(plan.originalPrice)}</del> now ${escapeHtml(plan.price)}</span>` : `<span>${escapeHtml(plan.price)}</span>`}
     <span>${escapeHtml(plan.limits)}</span>
     <ul>
       ${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
@@ -1794,7 +1815,7 @@ function renderVouchlyLandingAuth() {
           </div>
           <h2>${isSignup ? "Start your free month." : "Welcome back."}</h2>
           <p>${isSignup ? "Create your account. After signup, add your business details and Google review link." : "Sign in to manage customers, review requests, templates, and follow-ups."}</p>
-          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${escapeHtml(pendingPlan.price)}</small></div>` : ""}
+          ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${pendingPlan.originalPrice ? `${escapeHtml(pendingPlan.offer)}: ${escapeHtml(pendingPlan.price)}` : escapeHtml(pendingPlan.price)}</small></div>` : ""}
           <form id="auth-form" class="auth-form">
             <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
             <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
@@ -1929,7 +1950,7 @@ function vouchlyMarketingPlan(plan) {
     <article class="marketing-plan ${isGrowth ? "popular" : ""}">
       ${isGrowth ? `<span class="popular-pill">⭐ Most popular</span>` : ""}
       <span>${escapeHtml(plan.name)}</span>
-      <strong>${escapeHtml(displayPrice)}</strong>
+      ${renderPlanPrice(plan)}
       <p>${escapeHtml(plan.fit)}</p>
       <small>${escapeHtml(plan.limits)}</small>
       <ul>${plan.includes.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
