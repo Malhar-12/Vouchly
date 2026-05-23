@@ -115,6 +115,12 @@ const defaultState = {
     plan: "free",
     setupComplete: false
   },
+  sending: {
+    preferredChannel: "whatsapp",
+    whatsapp: "not_connected",
+    sms: "not_connected",
+    email: "not_connected"
+  },
   customers: [
     {
       id: 1,
@@ -226,6 +232,10 @@ function mergeState(nextState = {}) {
     business: {
       ...defaultState.business,
       ...(nextState.business ?? {})
+    },
+    sending: {
+      ...defaultState.sending,
+      ...(nextState.sending ?? {})
     },
     customers: customers.map((customer) => ({
       ...customer,
@@ -694,6 +704,7 @@ function render() {
         ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
         ${setupComplete ? navButton("customers", "Customers") : ""}
         ${setupComplete ? navButton("automations", "Follow-ups") : ""}
+        ${setupComplete ? navButton("sending", "Sending") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
         <div class="business-card">
@@ -1036,7 +1047,7 @@ function renderHeader() {
       <div class="top-actions">
         <span class="account-pill">${escapeHtml(session.user.email)}</span>
         <button class="ghost-button" data-action="logout">Logout</button>
-        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Schedule pending</button>` : ""}
+        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Prepare pending</button>` : ""}
       </div>
     </header>
   `;
@@ -1045,6 +1056,7 @@ function renderHeader() {
 function renderView() {
   if (state.activeView === "customers") return renderCustomers();
   if (state.activeView === "automations") return renderAutomations();
+  if (state.activeView === "sending") return renderSending();
   if (state.activeView === "templates") return renderTemplates();
   if (state.activeView === "settings") return renderSettings();
   return renderDashboard();
@@ -1380,6 +1392,100 @@ function renderAutomations() {
       ${taskRows(state.tasks)}
     </section>
   `;
+}
+
+function renderSending() {
+  const providers = [
+    {
+      id: "whatsapp",
+      name: "WhatsApp Business",
+      bestFor: "Best first provider for Indian local businesses.",
+      nextStep: "Connect Meta WhatsApp Cloud API or a BSP like Interakt, WATI, AiSensy, or Twilio."
+    },
+    {
+      id: "sms",
+      name: "SMS",
+      bestFor: "Useful for customers who do not use WhatsApp.",
+      nextStep: "Connect an SMS provider after sender ID and compliance setup."
+    },
+    {
+      id: "email",
+      name: "Email",
+      bestFor: "Good for receipts, confirmations, and backup delivery.",
+      nextStep: "Connect an email sender like Resend, SendGrid, or SMTP."
+    }
+  ];
+
+  return `
+    <section class="setup-hero">
+      <p class="eyebrow">Sending setup</p>
+      <h2>Messages are prepared here before real delivery is connected</h2>
+      <p>
+        Today Vouchly creates the message, adds the Google review link, and lets the owner copy or schedule it.
+        Real automatic sending starts after one provider is connected.
+      </p>
+    </section>
+    <section class="sending-grid">
+      ${providers.map((provider) => renderProviderCard(provider)).join("")}
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Owner workflow</p>
+          <h2>How a review request reaches the customer</h2>
+        </div>
+      </div>
+      <div class="workflow-list">
+        ${workflowStep("1", "Add customer", "Owner adds name, phone/email, channel, and visit date.")}
+        ${workflowStep("2", "Preview message", "Vouchly generates the message from the template and inserts the Google review link.")}
+        ${workflowStep("3", "Manual send today", "Owner copies the message and sends it from their own WhatsApp/SMS/email account.")}
+        ${workflowStep("4", "Automatic later", "After provider connection, Vouchly can send and track delivery automatically.")}
+      </div>
+    </section>
+  `;
+}
+
+function renderProviderCard(provider) {
+  const status = state.sending?.[provider.id] ?? "not_connected";
+  const isPreferred = state.sending?.preferredChannel === provider.id;
+
+  return `
+    <article class="provider-card ${isPreferred ? "preferred" : ""}">
+      <div class="provider-top">
+        <div>
+          <p class="eyebrow">${isPreferred ? "Preferred" : "Provider"}</p>
+          <h3>${escapeHtml(provider.name)}</h3>
+        </div>
+        <span class="status ${escapeHtml(status)}">${escapeHtml(formatProviderStatus(status))}</span>
+      </div>
+      <p>${escapeHtml(provider.bestFor)}</p>
+      <small>${escapeHtml(provider.nextStep)}</small>
+      <div class="provider-actions">
+        <button class="ghost-button small" data-action="set-preferred-provider" data-provider="${escapeHtml(provider.id)}">
+          ${isPreferred ? "Preferred" : "Make preferred"}
+        </button>
+        <button class="primary-button small" data-action="show-provider-next-step" data-provider="${escapeHtml(provider.id)}">
+          Setup guide
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function workflowStep(number, title, body) {
+  return `
+    <article class="workflow-step">
+      <strong>${number}</strong>
+      <div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(body)}</p>
+      </div>
+    </article>
+  `;
+}
+
+function formatProviderStatus(status) {
+  return status.replaceAll("_", " ");
 }
 
 function taskRows(tasks) {
@@ -1980,6 +2086,8 @@ function bindEvents() {
       if (action === "close-customer-editor") closeCustomerEditor();
       if (action === "mark-reviewed") markCustomerReviewed(id);
       if (action === "resend-confirmation") resendConfirmationEmail();
+      if (action === "set-preferred-provider") setPreferredProvider(button.dataset.provider);
+      if (action === "show-provider-next-step") showProviderNextStep(button.dataset.provider);
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
       if (action === "clear-customer-filters") clearCustomerFilters();
@@ -2116,7 +2224,7 @@ function bulkQueueRequests() {
       status: "scheduled"
     }));
 
-    appMessage = `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} scheduled.`;
+    appMessage = `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared. Copy/send manually until a provider is connected.`;
 
     return {
       ...current,
@@ -2137,6 +2245,32 @@ function completeTask(taskId) {
       task.id === taskId ? { ...task, status: "done" } : task
     )
   }));
+}
+
+function setPreferredProvider(providerId) {
+  if (!["whatsapp", "sms", "email"].includes(providerId)) {
+    return;
+  }
+
+  appMessage = `${providerId.toUpperCase()} is now the preferred sending channel.`;
+  setState((current) => ({
+    ...current,
+    sending: {
+      ...current.sending,
+      preferredChannel: providerId
+    }
+  }));
+}
+
+function showProviderNextStep(providerId) {
+  const guide = {
+    whatsapp: "Next: create/verify a Meta WhatsApp Business account, choose Cloud API or a BSP, then connect the API token and phone number.",
+    sms: "Next: choose an SMS provider, verify sender ID/compliance, then connect the API key.",
+    email: "Next: choose an email provider, verify the domain, then connect the API key."
+  };
+
+  appMessage = guide[providerId] ?? "Choose a sending provider first.";
+  render();
 }
 
 function previewMessage(customerId) {
@@ -2194,12 +2328,13 @@ function saveCustomerEdits(event) {
 
   appMessage = `${form.name} customer details saved.`;
   const customerWasMarkedReviewed = form.status === "reviewed";
+  const customerId = editingCustomerId;
   editingCustomerId = null;
 
   setState((current) => ({
     ...current,
     customers: current.customers.map((customer) =>
-      customer.id === editingCustomerId ? { ...customer, ...form } : customer
+      customer.id === customerId ? { ...customer, ...form } : customer
     ),
     tasks: current.tasks.map((task) => {
       const belongsToCustomer = task.customerName === currentCustomer.name;

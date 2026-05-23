@@ -1436,12 +1436,105 @@ th {
   color: #24723b;
 }
 
+.status.not_connected {
+  background: #eef3f5;
+  color: #64727d;
+  text-transform: capitalize;
+}
+
 .empty-state {
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
   padding: 28px;
   text-align: center;
+}
+
+.sending-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.provider-card {
+  background:
+    radial-gradient(circle at top right, rgba(18, 107, 104, 0.1), transparent 11rem),
+    white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.provider-card.preferred {
+  border-color: #b7dcd6;
+  box-shadow:
+    0 0 0 4px rgba(18, 107, 104, 0.08),
+    var(--shadow);
+}
+
+.provider-top,
+.provider-actions {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.provider-card h3 {
+  margin-bottom: 0;
+}
+
+.provider-card p,
+.provider-card small,
+.workflow-step p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.provider-card small {
+  display: block;
+}
+
+.provider-actions {
+  flex-wrap: wrap;
+  margin-top: auto;
+  justify-content: flex-start;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 12px;
+}
+
+.workflow-step {
+  align-items: start;
+  background: #f7fbfa;
+  border: 1px solid #d8e6e4;
+  border-radius: 14px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto 1fr;
+  padding: 16px;
+}
+
+.workflow-step strong {
+  align-items: center;
+  background: var(--brand);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.workflow-step h3 {
+  margin-bottom: 4px;
 }
 
 .template-grid {
@@ -1676,6 +1769,7 @@ th {
   .metrics-grid,
   .split-grid,
   .template-grid,
+  .sending-grid,
   .settings-form,
   .plan-grid,
   .auth-page,
