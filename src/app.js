@@ -100,8 +100,8 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    price: "INR 4,999 / month",
-    originalPrice: "INR 9,999 / month",
+    price: "INR 2,999 / month",
+    originalPrice: "INR 5,999 / month",
     offer: "Launch 50% off",
     fit: "For high-volume teams, multi-location services, and agencies.",
     limits: "Up to 5,000 customers/month",
