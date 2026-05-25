@@ -744,14 +744,81 @@ select {
     #10191d;
   color: white;
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 20px;
+  justify-content: space-between;
   padding: 34px;
+}
+
+.marketing-footer div {
+  display: grid;
+  gap: 5px;
 }
 
 .marketing-footer span {
   color: #aac0c6;
   font-weight: 700;
+}
+
+.footer-legal-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.footer-legal-links a {
+  color: #d8e7ea;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.footer-legal-links a:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.public-legal-section {
+  background: #f7fbfa;
+  border-top: 1px solid var(--line);
+  padding: 60px clamp(18px, 5vw, 72px);
+}
+
+.public-legal-inner {
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+.public-legal-inner h2 {
+  font-size: clamp(1.8rem, 3.4vw, 3.4rem);
+  letter-spacing: -0.04em;
+  margin-bottom: 24px;
+  max-width: 760px;
+}
+
+.public-legal-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.public-legal-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  scroll-margin-top: 110px;
+}
+
+.public-legal-card h3 {
+  margin-bottom: 10px;
+}
+
+.public-legal-card p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0;
 }
 
 .auth-card {
@@ -1922,6 +1989,7 @@ th {
   .marketing-hero,
   .marketing-grid.four,
   .marketing-grid.three,
+  .public-legal-grid,
   .pricing-grid,
   .marketing-auth-section {
     grid-template-columns: 1fr;

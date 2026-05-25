@@ -1092,11 +1092,52 @@ function renderAuth() {
         </section>
       </section>
 
-      <footer class="marketing-footer">
-        <strong>Vouchly</strong>
-        <span>Review growth software for local businesses worldwide · 30-day free trial · No spam, fake reviews, or purchased contact lists</span>
-      </footer>
+      ${renderPublicLegalSection()}
+      ${renderMarketingFooter("Vouchly")}
     </main>
+  `;
+}
+
+function renderMarketingFooter(brandLabel = "Vouchly") {
+  return `
+    <footer class="marketing-footer">
+      <div>
+        <strong>${brandLabel}</strong>
+        <span>Review growth software for local businesses worldwide · 30-day free trial · No spam, fake reviews, or purchased contact lists</span>
+      </div>
+      <nav class="footer-legal-links" aria-label="Legal links">
+        <a href="#terms">Terms</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#refund">Refund</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </footer>
+  `;
+}
+
+function renderPublicLegalSection() {
+  return `
+    <section class="public-legal-section" id="legal">
+      <div class="public-legal-inner">
+        <p class="eyebrow">Legal</p>
+        <h2>Clear rules before customers start sending requests.</h2>
+        <div class="public-legal-grid">
+          ${publicLegalCard("terms", "Terms & Conditions", "Free Trial is limited to 30 days, 100 customers, and 30 prepared review requests. Businesses must upgrade after the free limit to keep adding customers or preparing requests. Vouchly can suspend accounts for spam, fake reviews, abuse, payment failure, or attempts to bypass limits.")}
+          ${publicLegalCard("privacy", "Privacy Policy", "Customer names, phone numbers, emails, visit dates, templates, and business settings are treated as private workspace data. Businesses are responsible for adding only lawful customer data and deleting records when customers request it.")}
+          ${publicLegalCard("refund", "Refund Policy", "Launch pricing is subscription based. Refunds should be handled case by case for duplicate charges, accidental payments, or service issues. A final lawyer-reviewed refund policy should be added before collecting live payments.")}
+          ${publicLegalCard("contact", "Contact", "For support, billing, data deletion, or legal requests, business owners should contact Vouchly support from their registered email. Add your final support email before public launch.")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function publicLegalCard(id, title, body) {
+  return `
+    <article class="public-legal-card" id="${id}">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+    </article>
   `;
 }
 
@@ -2027,10 +2068,8 @@ function renderVouchlyLandingAuth() {
         </section>
       </section>
 
-      <footer class="marketing-footer">
-        <strong>⭐ Vouchly</strong>
-        <span>Review growth software for local businesses worldwide · 30-day free trial · No spam, fake reviews, or purchased contact lists</span>
-      </footer>
+      ${renderPublicLegalSection()}
+      ${renderMarketingFooter("⭐ Vouchly")}
     </main>
   `;
 }
