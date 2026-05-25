@@ -75,7 +75,10 @@ const plans = [
     price: "INR 0 / first month",
     fit: "For testing Vouchly with real customers before paying.",
     limits: "Up to 100 customers in the first month",
-    includes: ["Customer list", "Review request tracking", "CSV data backup", "Editable templates", "30 automated review requests", "10 follow-up tasks"]
+    customerLimit: 100,
+    requestLimit: 30,
+    trialDays: 30,
+    includes: ["Customer list", "Review request tracking", "CSV data backup", "Editable templates", "30 prepared review requests", "10 follow-up tasks", "Upgrade required after 30 days"]
   },
   {
     id: "starter",
@@ -85,6 +88,8 @@ const plans = [
     offer: "Launch 50% off",
     fit: "For small shops that want affordable review tracking and light automation.",
     limits: "Up to 500 customers/month",
+    customerLimit: 500,
+    requestLimit: 100,
     includes: ["Customer list", "Review request tracking", "CSV data backup", "100 automated review requests"]
   },
   {
@@ -95,6 +100,8 @@ const plans = [
     offer: "Launch 50% off",
     fit: "Main plan for growing local businesses that need follow-up automation.",
     limits: "Up to 1,500 customers/month",
+    customerLimit: 1500,
+    requestLimit: 1500,
     includes: ["Everything in Starter", "Automation tasks", "Editable message templates", "Review request sending workflow", "Lead follow-up"]
   },
   {
@@ -105,6 +112,8 @@ const plans = [
     offer: "Launch 50% off",
     fit: "For high-volume teams, multi-location services, and agencies.",
     limits: "Up to 5,000 customers/month",
+    customerLimit: 5000,
+    requestLimit: 5000,
     includes: ["Everything in Growth", "Priority support", "Future multi-user controls", "Advanced reporting"]
   }
 ];
@@ -119,6 +128,8 @@ const defaultState = {
     googleReviewLink: "",
     senderName: "Bright Local Services",
     plan: "free",
+    trialStartedAt: "",
+    acceptedTermsAt: "",
     setupComplete: false
   },
   sending: {
@@ -536,6 +547,105 @@ function completionRate() {
   return Math.round((reviewed / state.customers.length) * 100);
 }
 
+function getCurrentPlan() {
+  return plans.find((plan) => plan.id === state.business.plan) ?? plans[0];
+}
+
+function getTrialStartedAt() {
+  return state.business.trialStartedAt || state.business.createdAt || "";
+}
+
+function getTrialDaysUsed() {
+  const startedAt = getTrialStartedAt();
+  if (!startedAt) {
+    return 0;
+  }
+
+  const started = new Date(startedAt);
+  if (Number.isNaN(started.getTime())) {
+    return 0;
+  }
+
+  const diff = Date.now() - started.getTime();
+  return Math.max(0, Math.floor(diff / 86400000) + 1);
+}
+
+function countPreparedRequests() {
+  return state.tasks.filter((task) => task.title.toLowerCase().startsWith("review request")).length;
+}
+
+function getPlanUsage(plan = getCurrentPlan()) {
+  const trialDaysUsed = getTrialDaysUsed();
+  const trialDaysLeft =
+    plan.trialDays && state.business.trialStartedAt
+      ? Math.max(0, plan.trialDays - trialDaysUsed)
+      : plan.trialDays ?? null;
+
+  return {
+    customers: state.customers.length,
+    customerLimit: plan.customerLimit ?? Infinity,
+    requests: countPreparedRequests(),
+    requestLimit: plan.requestLimit ?? Infinity,
+    trialDaysLeft,
+    trialExpired: Boolean(plan.trialDays && state.business.trialStartedAt && trialDaysUsed > plan.trialDays)
+  };
+}
+
+function isPlanLocked() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+  return plan.id === "free" && usage.trialExpired;
+}
+
+function getPlanAccessMessage() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+
+  if (usage.trialExpired) {
+    return "Free trial ended. Upgrade to Starter, Growth, or Pro to keep adding customers and preparing review requests.";
+  }
+
+  if (usage.customers >= usage.customerLimit) {
+    return `${plan.name} customer limit reached (${usage.customerLimit}). Upgrade to continue adding customers.`;
+  }
+
+  if (usage.requests >= usage.requestLimit) {
+    return `${plan.name} request limit reached (${usage.requestLimit}). Upgrade to prepare more review requests.`;
+  }
+
+  return "";
+}
+
+function getCustomerLimitMessage(extraCustomers = 1) {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+
+  if (usage.trialExpired) {
+    return getPlanAccessMessage();
+  }
+
+  if (usage.customers + extraCustomers > usage.customerLimit) {
+    return `${plan.name} allows ${usage.customerLimit} customers. Upgrade to add more.`;
+  }
+
+  return "";
+}
+
+function getRequestLimitMessage(extraRequests = 1) {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+
+  if (usage.trialExpired) {
+    return getPlanAccessMessage();
+  }
+
+  if (usage.requests + extraRequests > usage.requestLimit) {
+    return `${plan.name} allows ${usage.requestLimit} prepared review requests. Upgrade to prepare more.`;
+  }
+
+  return "";
+}
+
 function isSetupComplete() {
   return Boolean(
     state.business.setupComplete &&
@@ -572,6 +682,13 @@ function buildMessage(customer) {
 }
 
 function queueReviewRequest(customerId) {
+  const requestLimitMessage = getRequestLimitMessage();
+  if (requestLimitMessage) {
+    appMessage = requestLimitMessage;
+    render();
+    return;
+  }
+
   const customer = state.customers.find((entry) => entry.id === customerId);
   if (!customer) {
     return;
@@ -713,6 +830,7 @@ function render() {
         ${setupComplete ? navButton("sending", "Sending") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
+        ${setupComplete ? navButton("legal", "Terms & Privacy") : ""}
         <div class="business-card">
           <small>Business</small>
           <strong>${escapeHtml(state.business.name)}</strong>
@@ -724,6 +842,7 @@ function render() {
         ${renderHeader()}
         ${renderSyncBanner()}
         ${renderAppMessage()}
+        ${setupComplete ? renderPlanBanner() : ""}
         ${setupComplete ? renderView() : renderOnboarding()}
         ${renderMessagePreview()}
         ${renderCustomerEditor()}
@@ -975,7 +1094,7 @@ function renderAuth() {
 
       <footer class="marketing-footer">
         <strong>Vouchly</strong>
-        <span>Review growth software for local businesses worldwide</span>
+        <span>Review growth software for local businesses worldwide · 30-day free trial · No spam, fake reviews, or purchased contact lists</span>
       </footer>
     </main>
   `;
@@ -1051,6 +1170,37 @@ function renderAppMessage() {
   return `<div class="app-message">${escapeHtml(appMessage)}</div>`;
 }
 
+function renderPlanBanner() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+  const alert = getPlanAccessMessage();
+
+  if (alert) {
+    return `
+      <div class="plan-banner warning">
+        <strong>Upgrade needed</strong>
+        <span>${escapeHtml(alert)}</span>
+      </div>
+    `;
+  }
+
+  if (plan.id === "free") {
+    return `
+      <div class="plan-banner">
+        <strong>Free trial</strong>
+        <span>${usage.trialDaysLeft} day${usage.trialDaysLeft === 1 ? "" : "s"} left · ${usage.customers}/${usage.customerLimit} customers · ${usage.requests}/${usage.requestLimit} prepared requests</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="plan-banner">
+      <strong>${escapeHtml(plan.name)} plan</strong>
+      <span>${usage.customers}/${usage.customerLimit} customers · ${usage.requests}/${usage.requestLimit} prepared requests this workspace</span>
+    </div>
+  `;
+}
+
 function navButton(view, label) {
   return `<button class="nav-button ${state.activeView === view ? "active" : ""}" data-view="${view}">${label}</button>`;
 }
@@ -1079,6 +1229,7 @@ function renderView() {
   if (state.activeView === "sending") return renderSending();
   if (state.activeView === "templates") return renderTemplates();
   if (state.activeView === "settings") return renderSettings();
+  if (state.activeView === "legal") return renderLegal();
   return renderDashboard();
 }
 
@@ -1579,6 +1730,49 @@ function renderTemplates() {
   `;
 }
 
+function renderLegal() {
+  return `
+    <section class="panel legal-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Legal</p>
+          <h2>Terms, privacy, and acceptable use</h2>
+        </div>
+      </div>
+      <div class="legal-grid">
+        <article class="legal-card">
+          <h3>Subscription and free trial</h3>
+          <p>The Free Trial is limited to 30 days, 100 customers, and 30 prepared review requests. After the trial ends, the workspace stays accessible for account review and data backup, but adding customers and preparing new requests requires a paid plan.</p>
+          <p>Plan limits may change for future customers. Existing paid users should be notified before major pricing or limit changes.</p>
+        </article>
+        <article class="legal-card">
+          <h3>Customer consent</h3>
+          <p>Business owners must only add customers who have interacted with their business and may reasonably receive service follow-up messages. Vouchly must not be used for spam, scraped contacts, purchased contact lists, harassment, illegal promotions, or misleading review requests.</p>
+        </article>
+        <article class="legal-card">
+          <h3>Review policy</h3>
+          <p>Vouchly helps businesses request honest reviews. Owners must not offer fake incentives, force positive reviews, hide negative feedback, impersonate customers, or violate Google/marketplace review policies.</p>
+        </article>
+        <article class="legal-card">
+          <h3>Data privacy</h3>
+          <p>Customer names, phone numbers, emails, visit dates, message templates, and business settings are treated as private workspace data. Owners are responsible for deleting customer records on request and for collecting data lawfully in their country.</p>
+        </article>
+        <article class="legal-card">
+          <h3>Sending providers</h3>
+          <p>Manual WhatsApp opens the owner's own WhatsApp session. Automatic WhatsApp, SMS, or email sending requires a connected provider and may have extra provider fees, template approvals, opt-out requirements, delivery rules, and regional compliance requirements.</p>
+        </article>
+        <article class="legal-card">
+          <h3>Service limits</h3>
+          <p>Vouchly can suspend accounts for abuse, spam behavior, payment failure, security risk, or attempts to bypass plan limits. Data export remains available where technically and legally possible.</p>
+        </article>
+      </div>
+      <div class="legal-note">
+        This is product policy copy for the MVP. Before charging real customers, get a local lawyer to review final Terms of Service, Privacy Policy, refund policy, and DPDP/GDPR compliance language.
+      </div>
+    </section>
+  `;
+}
+
 function renderSettings(isOnboarding = false) {
   const firstTemplate = state.templates[0] ?? defaultState.templates[0];
   const reminderTemplate = state.templates[1] ?? defaultState.templates[1];
@@ -1655,6 +1849,10 @@ function renderSettings(isOnboarding = false) {
         <div class="template-help wide">
           Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>. Vouchly adds the Google review link automatically.
         </div>
+        <label class="terms-check wide">
+          <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
+          <span>I agree to Vouchly's Terms, Privacy rules, anti-spam policy, and honest-review policy. I will only message customers who gave their contact details or have a real business relationship with me.</span>
+        </label>
         ${isOnboarding ? "" : `<button class="ghost-button wide" data-action="export" type="button">Download data backup</button>`}
         <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
       </form>
@@ -1831,7 +2029,7 @@ function renderVouchlyLandingAuth() {
 
       <footer class="marketing-footer">
         <strong>⭐ Vouchly</strong>
-        <span>Review growth software for local businesses worldwide</span>
+        <span>Review growth software for local businesses worldwide · 30-day free trial · No spam, fake reviews, or purchased contact lists</span>
       </footer>
     </main>
   `;
@@ -2169,6 +2367,13 @@ function clearCustomerFilters() {
 
 function addCustomer(event) {
   event.preventDefault();
+  const customerLimitMessage = getCustomerLimitMessage();
+  if (customerLimitMessage) {
+    appMessage = customerLimitMessage;
+    render();
+    return;
+  }
+
   const form = new FormData(event.currentTarget);
   const customer = Object.fromEntries(form.entries());
   appMessage = `${customer.name} added to customers.`;
@@ -2189,11 +2394,17 @@ function addCustomer(event) {
 function saveSettings(event) {
   event.preventDefault();
   const form = Object.fromEntries(new FormData(event.currentTarget).entries());
-  const { firstTemplate, reminderTemplate, ...business } = form;
+  const { firstTemplate, reminderTemplate, acceptTerms, ...business } = form;
   const missingFields = requiredSetupFields(form);
 
   if (missingFields.length) {
     appMessage = `Please fill: ${missingFields.map(([label]) => label).join(", ")}.`;
+    render();
+    return;
+  }
+
+  if (!acceptTerms) {
+    appMessage = "Please accept the Terms, Privacy rules, anti-spam policy, and honest-review policy before using Vouchly.";
     render();
     return;
   }
@@ -2206,6 +2417,8 @@ function saveSettings(event) {
     business: {
       ...current.business,
       ...business,
+      trialStartedAt: current.business.trialStartedAt || new Date().toISOString(),
+      acceptedTermsAt: current.business.acceptedTermsAt || new Date().toISOString(),
       setupComplete: true
     },
     templates: current.templates.map((template, index) => {
@@ -2236,6 +2449,12 @@ function bulkQueueRequests() {
 
     if (!customersToSchedule.length) {
       appMessage = "No pending customers need scheduling right now.";
+      return current;
+    }
+
+    const requestLimitMessage = getRequestLimitMessage(customersToSchedule.length);
+    if (requestLimitMessage) {
+      appMessage = requestLimitMessage;
       return current;
     }
 
