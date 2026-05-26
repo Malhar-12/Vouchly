@@ -529,6 +529,121 @@ function defaultCustomerFilters() {
   };
 }
 
+function createEmptyWorkspaceState() {
+  return mergeState({
+    ...structuredClone(defaultState),
+    activeView: "settings",
+    business: {
+      ...defaultState.business,
+      name: "",
+      owner: "",
+      city: "",
+      googleReviewLink: "",
+      senderName: "",
+      trialStartedAt: "",
+      acceptedTermsAt: "",
+      setupComplete: false
+    },
+    customers: [],
+    tasks: [],
+    deletedCustomerKeys: []
+  });
+}
+
+function createDemoWorkspaceState() {
+  const today = getTodayDateValue();
+  const yesterday = getDateValueFromToday(-1);
+  const twoDaysAgo = getDateValueFromToday(-2);
+  const now = new Date().toISOString();
+
+  return mergeState({
+    ...structuredClone(defaultState),
+    activeView: "dashboard",
+    business: {
+      ...defaultState.business,
+      name: "Bright Local Services",
+      type: "General Store",
+      owner: "Business Owner",
+      city: "Bangalore",
+      googleReviewLink: "https://g.page/r/demo-review-link",
+      senderName: "Bright Local Services",
+      plan: "free",
+      trialStartedAt: state.business.trialStartedAt || now,
+      acceptedTermsAt: state.business.acceptedTermsAt || now,
+      setupComplete: true
+    },
+    customers: [
+      {
+        id: 101,
+        name: "Priya Sharma",
+        phone: "+91 98765 43210",
+        email: "priya@example.com",
+        channel: "whatsapp",
+        visitDate: today,
+        status: "scheduled",
+        source: "walk-in"
+      },
+      {
+        id: 102,
+        name: "Rahul Mehta",
+        phone: "+91 99887 77665",
+        email: "",
+        channel: "whatsapp",
+        visitDate: today,
+        status: "pending",
+        source: "service"
+      },
+      {
+        id: 103,
+        name: "Neha Kapoor",
+        phone: "+91 90909 11223",
+        email: "neha@example.com",
+        channel: "email",
+        visitDate: yesterday,
+        status: "reviewed",
+        source: "online"
+      },
+      {
+        id: 104,
+        name: "Amit Verma",
+        phone: "+91 80808 33445",
+        email: "",
+        channel: "sms",
+        visitDate: twoDaysAgo,
+        status: "pending",
+        source: "referral"
+      }
+    ],
+    tasks: [
+      {
+        id: 201,
+        title: "Review request",
+        customerName: "Priya Sharma",
+        channel: "whatsapp",
+        dueAt: `${today} 11:00`,
+        status: "scheduled"
+      },
+      {
+        id: 202,
+        title: "Review reminder",
+        customerName: "Rahul Mehta",
+        channel: "whatsapp",
+        dueAt: `${today} 18:00`,
+        status: "scheduled"
+      },
+      {
+        id: 203,
+        title: "Review request",
+        customerName: "Neha Kapoor",
+        channel: "email",
+        dueAt: `${yesterday} 11:00`,
+        status: "done"
+      }
+    ],
+    deletedCustomerKeys: []
+  });
+}
+
 function escapeHtml(value = "") {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -1258,7 +1373,7 @@ function renderHeader() {
       <div class="top-actions">
         <span class="account-pill">${escapeHtml(session.user.email)}</span>
         <button class="ghost-button" data-action="logout">Logout</button>
-        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Prepare pending</button>` : ""}
+        ${setupComplete ? `<button class="primary-button" data-action="bulk-send">Prepare requests</button>` : ""}
       </div>
     </header>
   `;
@@ -1280,6 +1395,10 @@ function renderOnboarding() {
       <p class="eyebrow">Business setup</p>
       <h2>Set up the review workflow before sending requests</h2>
       <p>Vouchly will use this profile and the templates below when customers receive review requests.</p>
+      <div class="setup-actions">
+        <button class="primary-button" data-action="load-demo" type="button">Try demo workspace</button>
+        <button class="ghost-button" data-action="reset-workspace" type="button">Start clean setup</button>
+      </div>
     </section>
     ${renderSettings(true)}
   `;
@@ -1290,6 +1409,7 @@ function renderDashboard() {
   const pending = state.customers.filter((customer) => customer.status === "pending").length;
 
   return `
+    ${renderDashboardQuickActions(pending, scheduled)}
     <section class="metrics-grid">
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
       ${metricCard("Review rate", `${completionRate()}%`, "marked reviewed")}
@@ -1318,6 +1438,28 @@ function renderDashboard() {
         ${taskRows(state.tasks.slice(0, 5))}
       </div>
     </section>
+  `;
+}
+
+function renderDashboardQuickActions(pending, scheduled) {
+  return `
+    <section class="quick-actions">
+      ${quickActionCard("Add customer", "Add a new customer after a sale, visit, or service.", "customers", "")}
+      ${quickActionCard("Prepare requests", `${pending} pending customer${pending === 1 ? "" : "s"} can be prepared.`, "", "bulk-send")}
+      ${quickActionCard("Follow-ups", `${scheduled} scheduled reminder${scheduled === 1 ? "" : "s"} ready to track.`, "automations", "")}
+      ${quickActionCard("Sending setup", "Connect WhatsApp, SMS, or email when ready.", "sending", "")}
+    </section>
+  `;
+}
+
+function quickActionCard(title, detail, view, action) {
+  const attribute = view ? `data-view="${view}"` : `data-action="${action}"`;
+
+  return `
+    <button class="quick-action-card" ${attribute} type="button">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </button>
   `;
 }
 
@@ -1894,7 +2036,15 @@ function renderSettings(isOnboarding = false) {
           <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
           <span>I agree to Vouchly's Terms, Privacy rules, anti-spam policy, and honest-review policy. I will only message customers who gave their contact details or have a real business relationship with me.</span>
         </label>
-        ${isOnboarding ? "" : `<button class="ghost-button wide" data-action="export" type="button">Download data backup</button>`}
+        ${
+          isOnboarding
+            ? ""
+            : `<div class="workspace-tools wide">
+                <button class="ghost-button" data-action="load-demo" type="button">Load demo data</button>
+                <button class="ghost-button" data-action="export" type="button">Download data backup</button>
+                <button class="danger-button" data-action="reset-workspace" type="button">Reset workspace</button>
+              </div>`
+        }
         <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
       </form>
     </section>
@@ -2352,6 +2502,8 @@ function bindEvents() {
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
       if (action === "clear-customer-filters") clearCustomerFilters();
+      if (action === "load-demo") loadDemoWorkspace();
+      if (action === "reset-workspace") resetWorkspaceData();
       if (action === "logout") logout();
     });
   });
@@ -2402,6 +2554,39 @@ function moveCustomerPage(direction) {
 function clearCustomerFilters() {
   customerFilters = defaultCustomerFilters();
   render();
+}
+
+function loadDemoWorkspace() {
+  const hasWorkspaceData = isSetupComplete() && (state.customers.length || state.tasks.length);
+  const shouldReplace =
+    !hasWorkspaceData ||
+    window.confirm("Load demo workspace? This will replace the current Vouchly workspace on this account.");
+
+  if (!shouldReplace) {
+    return;
+  }
+
+  customerFilters = defaultCustomerFilters();
+  messagePreviewCustomerId = null;
+  editingCustomerId = null;
+  appMessage = "Demo workspace loaded. You can now explore the full flow safely.";
+  setState(createDemoWorkspaceState());
+}
+
+function resetWorkspaceData() {
+  const shouldReset =
+    !isSetupComplete() ||
+    window.confirm("Reset Vouchly workspace? This removes customers, follow-ups, and setup details from this account.");
+
+  if (!shouldReset) {
+    return;
+  }
+
+  customerFilters = defaultCustomerFilters();
+  messagePreviewCustomerId = null;
+  editingCustomerId = null;
+  appMessage = "Workspace reset. Start clean setup or load demo data.";
+  setState(createEmptyWorkspaceState());
 }
 
 function addCustomer(event) {
