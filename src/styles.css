@@ -1199,6 +1199,46 @@ h2 {
   margin-bottom: 22px;
 }
 
+.sending-mode-banner {
+  align-items: center;
+  background:
+    radial-gradient(circle at top right, rgba(18, 107, 104, 0.12), transparent 14rem),
+    white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+}
+
+.sending-mode-banner.manual {
+  background:
+    radial-gradient(circle at top right, rgba(216, 132, 49, 0.12), transparent 14rem),
+    #fffdf8;
+}
+
+.sending-mode-banner.ready {
+  border-color: #b7dcd6;
+}
+
+.sending-mode-banner strong,
+.sending-mode-banner span {
+  display: block;
+}
+
+.sending-mode-banner strong {
+  color: var(--brand-strong);
+  margin-bottom: 4px;
+}
+
+.sending-mode-banner span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .quick-action-card {
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 250, 0.9)),
@@ -1729,6 +1769,58 @@ th {
   margin-bottom: 22px;
 }
 
+.sending-readiness {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.readiness-item {
+  align-items: flex-start;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto 1fr;
+  padding: 16px;
+}
+
+.readiness-item strong {
+  align-items: center;
+  background: #eef3f5;
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-weight: 900;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.readiness-item.done {
+  border-color: #b7dcd6;
+}
+
+.readiness-item.done strong {
+  background: var(--soft);
+  color: var(--brand-strong);
+}
+
+.readiness-item h3 {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.readiness-item p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-bottom: 0;
+}
+
 .provider-card {
   background:
     radial-gradient(circle at top right, rgba(18, 107, 104, 0.1), transparent 11rem),
@@ -2040,6 +2132,7 @@ th {
 
   .metrics-grid,
   .quick-actions,
+  .sending-readiness,
   .split-grid,
   .template-grid,
   .sending-grid,

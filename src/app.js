@@ -666,6 +666,26 @@ function getCurrentPlan() {
   return plans.find((plan) => plan.id === state.business.plan) ?? plans[0];
 }
 
+function getConnectedProviders() {
+  return ["whatsapp", "sms", "email"].filter((provider) => state.sending?.[provider] === "connected");
+}
+
+function isAnyProviderConnected() {
+  return getConnectedProviders().length > 0;
+}
+
+function getSendingModeLabel() {
+  return isAnyProviderConnected() ? "API sending ready" : "Manual sending mode";
+}
+
+function getSendingModeDetail() {
+  if (isAnyProviderConnected()) {
+    return `Connected: ${getConnectedProviders().join(", ")}. Vouchly can move toward automatic delivery for approved channels.`;
+  }
+
+  return "Vouchly prepares the message and review link. The owner sends it from their own WhatsApp, SMS, or email until a provider is connected.";
+}
+
 function getTrialStartedAt() {
   return state.business.trialStartedAt || state.business.createdAt || "";
 }
@@ -1409,6 +1429,7 @@ function renderDashboard() {
   const pending = state.customers.filter((customer) => customer.status === "pending").length;
 
   return `
+    ${renderSendingModeBanner()}
     ${renderDashboardQuickActions(pending, scheduled)}
     <section class="metrics-grid">
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
@@ -1441,13 +1462,25 @@ function renderDashboard() {
   `;
 }
 
+function renderSendingModeBanner() {
+  return `
+    <section class="sending-mode-banner ${isAnyProviderConnected() ? "ready" : "manual"}">
+      <div>
+        <strong>${escapeHtml(getSendingModeLabel())}</strong>
+        <span>${escapeHtml(getSendingModeDetail())}</span>
+      </div>
+      <button class="ghost-button small" data-view="sending" type="button">View sending setup</button>
+    </section>
+  `;
+}
+
 function renderDashboardQuickActions(pending, scheduled) {
   return `
     <section class="quick-actions">
       ${quickActionCard("Add customer", "Add a new customer after a sale, visit, or service.", "customers", "")}
-      ${quickActionCard("Prepare requests", `${pending} pending customer${pending === 1 ? "" : "s"} can be prepared.`, "", "bulk-send")}
+      ${quickActionCard("Prepare requests", `${pending} pending customer${pending === 1 ? "" : "s"} can be prepared for manual sending.`, "", "bulk-send")}
       ${quickActionCard("Follow-ups", `${scheduled} scheduled reminder${scheduled === 1 ? "" : "s"} ready to track.`, "automations", "")}
-      ${quickActionCard("Sending setup", "Connect WhatsApp, SMS, or email when ready.", "sending", "")}
+      ${quickActionCard("Sending setup", getSendingModeLabel(), "sending", "")}
     </section>
   `;
 }
@@ -1497,7 +1530,7 @@ function renderCustomers() {
           <option value="sms">SMS</option>
           <option value="email">Email</option>
         </select>
-        <input name="visitDate" type="date" value="${new Date().toISOString().slice(0, 10)}" />
+        <input name="visitDate" type="date" value="${getTodayDateValue()}" />
         <input name="source" placeholder="Source" value="walk-in" />
         <button class="primary-button" type="submit">Add customer</button>
       </form>
@@ -1781,6 +1814,12 @@ function renderSending() {
         Real automatic sending starts after one provider is connected.
       </p>
     </section>
+    <section class="sending-readiness">
+      ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
+      ${readinessItem("2", "Message templates", state.templates.every((template) => template.text?.includes("{{link}}")), "Keep review link placeholder in request and reminder templates.")}
+      ${readinessItem("3", "Customer consent", Boolean(state.business.acceptedTermsAt), "Owner confirms anti-spam, honest-review, and customer-consent rules.")}
+      ${readinessItem("4", "Provider API", isAnyProviderConnected(), "Connect WhatsApp Business API, SMS, or email provider for automatic delivery.")}
+    </section>
     <section class="sending-grid">
       ${providers.map((provider) => renderProviderCard(provider)).join("")}
     </section>
@@ -1798,6 +1837,18 @@ function renderSending() {
         ${workflowStep("4", "Automatic later", "After provider connection, Vouchly can send and track delivery automatically.")}
       </div>
     </section>
+  `;
+}
+
+function readinessItem(number, title, done, detail) {
+  return `
+    <article class="readiness-item ${done ? "done" : ""}">
+      <strong>${done ? "✓" : number}</strong>
+      <div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(detail)}</p>
+      </div>
+    </article>
   `;
 }
 
@@ -2691,7 +2742,9 @@ function bulkQueueRequests() {
       status: "scheduled"
     }));
 
-    appMessage = `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared. Copy/send manually until a provider is connected.`;
+    appMessage = isAnyProviderConnected()
+      ? `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared for connected delivery.`
+      : `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared. Open WhatsApp or copy the message to send manually until a provider is connected.`;
 
     return {
       ...current,
