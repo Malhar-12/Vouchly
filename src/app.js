@@ -709,6 +709,25 @@ function countPreparedRequests() {
   return state.tasks.filter((task) => task.title.toLowerCase().startsWith("review request")).length;
 }
 
+function getCurrentMonthPrefix() {
+  return getTodayDateValue().slice(0, 7);
+}
+
+function isInCurrentMonth(value = "") {
+  return String(value).startsWith(getCurrentMonthPrefix());
+}
+
+function countCustomersThisMonth() {
+  return state.customers.filter((customer) => isInCurrentMonth(customer.visitDate)).length;
+}
+
+function countPreparedRequestsThisMonth() {
+  return state.tasks.filter((task) => {
+    const title = task.title.toLowerCase();
+    return title.startsWith("review request") && isInCurrentMonth(task.dueAt);
+  }).length;
+}
+
 function getPlanUsage(plan = getCurrentPlan()) {
   const trialDaysUsed = getTrialDaysUsed();
   const trialDaysLeft =
@@ -717,9 +736,9 @@ function getPlanUsage(plan = getCurrentPlan()) {
       : plan.trialDays ?? null;
 
   return {
-    customers: state.customers.length,
+    customers: countCustomersThisMonth(),
     customerLimit: plan.customerLimit ?? Infinity,
-    requests: countPreparedRequests(),
+    requests: countPreparedRequestsThisMonth(),
     requestLimit: plan.requestLimit ?? Infinity,
     trialDaysLeft,
     trialExpired: Boolean(plan.trialDays && state.business.trialStartedAt && trialDaysUsed > plan.trialDays)
@@ -889,7 +908,7 @@ function exportData() {
       "",
       "",
       state.business.senderName,
-      new Date().toISOString().slice(0, 10),
+      getTodayDateValue(),
       "active",
       state.business.googleReviewLink
     ],
@@ -919,12 +938,16 @@ function exportData() {
     ])
   ];
 
+  downloadCsv("vouchly-data-backup.csv", rows);
+}
+
+function downloadCsv(filename, rows) {
   const csv = rows.map((row) => row.map(formatCsvCell).join(",")).join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "vouchly-data-backup.csv";
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -1430,6 +1453,7 @@ function renderDashboard() {
 
   return `
     ${renderSendingModeBanner()}
+    ${renderPlanUsageStrip()}
     ${renderDashboardQuickActions(pending, scheduled)}
     <section class="metrics-grid">
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
@@ -1459,6 +1483,44 @@ function renderDashboard() {
         ${taskRows(state.tasks.slice(0, 5))}
       </div>
     </section>
+  `;
+}
+
+function renderPlanUsageStrip() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+
+  return `
+    <section class="usage-strip">
+      <div>
+        <p class="eyebrow">Plan usage</p>
+        <h2>${escapeHtml(plan.name)} this month</h2>
+      </div>
+      ${usageMeter("Customers", usage.customers, usage.customerLimit)}
+      ${usageMeter("Prepared requests", usage.requests, usage.requestLimit)}
+      ${
+        usage.trialDaysLeft === null
+          ? ""
+          : usageMeter("Trial days left", usage.trialDaysLeft, plan.trialDays ?? usage.trialDaysLeft, true)
+      }
+    </section>
+  `;
+}
+
+function usageMeter(label, value, limit, reverse = false) {
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : value || 1;
+  const percent = Math.min(100, Math.round((value / safeLimit) * 100));
+  const visualPercent = reverse ? Math.max(0, Math.round((value / safeLimit) * 100)) : percent;
+
+  return `
+    <article class="usage-meter">
+      <div>
+        <strong>${escapeHtml(value)}</strong>
+        <span>${escapeHtml(Number.isFinite(limit) ? ` / ${limit}` : "")}</span>
+      </div>
+      <p>${escapeHtml(label)}</p>
+      <div class="meter-track"><span style="width: ${visualPercent}%"></span></div>
+    </article>
   `;
 }
 
@@ -1534,6 +1596,19 @@ function renderCustomers() {
         <input name="source" placeholder="Source" value="walk-in" />
         <button class="primary-button" type="submit">Add customer</button>
       </form>
+      <div class="import-card">
+        <div>
+          <strong>Import customers from CSV</strong>
+          <span>Use columns: name, phone, email, channel, visitDate, source. Imported customers start as pending.</span>
+        </div>
+        <div class="import-actions">
+          <label class="file-button">
+            Choose CSV
+            <input id="csv-import" type="file" accept=".csv,text/csv" />
+          </label>
+          <button class="ghost-button small" data-action="download-csv-template" type="button">Download template</button>
+        </div>
+      </div>
       <div class="list-toolbar">
         <input data-filter="query" value="${escapeHtml(customerFilters.query)}" placeholder="Search name, phone, email..." />
         <select data-filter="status">
@@ -2536,6 +2611,7 @@ function bindEvents() {
       const id = Number(button.dataset.id);
 
       if (action === "export") exportData();
+      if (action === "download-csv-template") downloadCsvTemplate();
       if (action === "bulk-send") bulkQueueRequests();
       if (action === "queue") queueReviewRequest(id);
       if (action === "delete-customer") deleteCustomer(id);
@@ -2560,6 +2636,7 @@ function bindEvents() {
   });
 
   document.querySelector("#customer-form")?.addEventListener("submit", addCustomer);
+  document.querySelector("#csv-import")?.addEventListener("change", importCustomersFromCsv);
   document.querySelector("#customer-editor-form")?.addEventListener("submit", saveCustomerEdits);
   document.querySelector("#settings-form")?.addEventListener("submit", saveSettings);
   document.querySelectorAll(".modal-card").forEach((modal) => {
@@ -2664,6 +2741,166 @@ function addCustomer(event) {
       ...current.customers
     ]
   }));
+}
+
+function downloadCsvTemplate() {
+  const rows = [
+    ["name", "phone", "email", "channel", "visitDate", "source"],
+    ["Priya Sharma", "+91 98765 43210", "priya@example.com", "whatsapp", getTodayDateValue(), "walk-in"]
+  ];
+  downloadCsv("vouchly-customer-import-template.csv", rows);
+}
+
+async function importCustomersFromCsv(event) {
+  const file = event.currentTarget.files?.[0];
+  event.currentTarget.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const importedCustomers = parseCustomerCsv(text);
+
+    if (!importedCustomers.length) {
+      appMessage = "No valid customers found. CSV needs at least a name and phone or email.";
+      render();
+      return;
+    }
+
+    const customerLimitMessage = getCustomerLimitMessage(importedCustomers.length);
+    if (customerLimitMessage) {
+      appMessage = customerLimitMessage;
+      render();
+      return;
+    }
+
+    appMessage = `${importedCustomers.length} customer${importedCustomers.length === 1 ? "" : "s"} imported from CSV.`;
+    customerFilters = {
+      ...defaultCustomerFilters(),
+      dateMode: "all"
+    };
+
+    setState((current) => ({
+      ...current,
+      customers: [
+        ...importedCustomers.map((customer, index) => ({
+          id: nextId(current.customers) + index,
+          ...customer,
+          status: "pending"
+        })),
+        ...current.customers
+      ]
+    }));
+  } catch (error) {
+    appMessage = `CSV import failed: ${error.message}`;
+    render();
+  }
+}
+
+function parseCustomerCsv(text) {
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => cell.trim()));
+  if (rows.length < 2) {
+    return [];
+  }
+
+  const headers = rows[0].map((header) => normalizeCsvHeader(header));
+  return rows
+    .slice(1)
+    .map((row) => csvRowToCustomer(headers, row))
+    .filter((customer) => customer.name && (customer.phone || customer.email));
+}
+
+function csvRowToCustomer(headers, row) {
+  const values = {};
+  headers.forEach((header, index) => {
+    values[header] = row[index]?.trim() ?? "";
+  });
+
+  return {
+    name: values.name || values.customername || values.customer || "",
+    phone: values.phone || values.mobile || values.contact || "",
+    email: values.email || "",
+    channel: normalizeChannel(values.channel || values.mode || "whatsapp"),
+    visitDate: normalizeDateValue(values.visitdate || values.date || values.visit || getTodayDateValue()),
+    source: values.source || "csv-import"
+  };
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let insideQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (char === '"' && insideQuotes && nextChar === '"') {
+      cell += '"';
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !insideQuotes) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
+function normalizeCsvHeader(value = "") {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeChannel(value = "") {
+  const channel = value.toLowerCase().trim();
+  return ["whatsapp", "sms", "email"].includes(channel) ? channel : "whatsapp";
+}
+
+function normalizeDateValue(value = "") {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const indianDate = trimmed.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (indianDate) {
+    const [, day, month, year] = indianDate;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return getTodayDateValue();
 }
 
 function saveSettings(event) {
