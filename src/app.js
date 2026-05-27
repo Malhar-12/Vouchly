@@ -675,15 +675,15 @@ function isAnyProviderConnected() {
 }
 
 function getSendingModeLabel() {
-  return isAnyProviderConnected() ? "API sending ready" : "Manual sending mode";
+  return isAnyProviderConnected() ? "Auto-send connected" : "Owner WhatsApp mode";
 }
 
 function getSendingModeDetail() {
   if (isAnyProviderConnected()) {
-    return `Connected: ${getConnectedProviders().join(", ")}. Vouchly can move toward automatic delivery for approved channels.`;
+    return `Connected: ${getConnectedProviders().join(", ")}. Vouchly can prepare approved delivery through connected channels.`;
   }
 
-  return "Vouchly prepares the message and review link. The owner sends it from their own WhatsApp, SMS, or email until a provider is connected.";
+  return "Vouchly prepares the review message and opens the owner's WhatsApp. The owner checks it and taps Send from their own number.";
 }
 
 function getTrialStartedAt() {
@@ -855,11 +855,11 @@ function queueReviewRequest(customerId) {
 
   setState((current) => {
     if (hasScheduledRequestForCustomer(current.tasks, customer, dueAt)) {
-      appMessage = `${customer.name} already has a scheduled review request.`;
+      appMessage = `${customer.name} already has a reminder for tomorrow at 5:00 PM.`;
       return current;
     }
 
-    appMessage = `${customer.name} review request scheduled.`;
+    appMessage = `${customer.name} reminder created for tomorrow at 5:00 PM. This does not auto-send; open WhatsApp and tap Send when ready.`;
 
     return {
       ...current,
@@ -1726,7 +1726,7 @@ function customerRows(customers, startIndex = 0) {
                     ${
                       customer.status === "reviewed"
                         ? `<span class="row-note">Reviewed</span>`
-                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule</button>
+                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}">Schedule reminder</button>
                            <button class="primary-button small" data-action="mark-reviewed" data-id="${customer.id}">Mark reviewed</button>`
                     }
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
@@ -1764,7 +1764,7 @@ function renderMessagePreview() {
         <div class="modal-actions">
           <button class="primary-button" data-action="copy-preview-message" type="button">Copy message</button>
           <button class="whatsapp-button" data-action="open-whatsapp-message" data-id="${customer.id}" type="button">Open WhatsApp</button>
-          <button class="ghost-button" data-action="queue" data-id="${customer.id}" type="button">Schedule request</button>
+          <button class="ghost-button" data-action="queue" data-id="${customer.id}" type="button">Schedule reminder</button>
         </div>
       </section>
     </div>
@@ -1853,65 +1853,61 @@ function renderAutomations() {
           <h2>Scheduled customer reminders</h2>
         </div>
       </div>
+      <div class="list-note">
+        These are owner reminders. Vouchly does not secretly send messages in the background; open WhatsApp, review the message, and tap Send.
+      </div>
       ${taskRows(state.tasks)}
     </section>
   `;
 }
 
 function renderSending() {
-  const providers = [
-    {
-      id: "whatsapp",
-      name: "WhatsApp Business",
-      bestFor: "Best first provider for Indian local businesses.",
-      nextStep: "Connect Meta WhatsApp Cloud API or a BSP like Interakt, WATI, AiSensy, or Twilio."
-    },
-    {
-      id: "sms",
-      name: "SMS",
-      bestFor: "Useful for customers who do not use WhatsApp.",
-      nextStep: "Connect an SMS provider after sender ID and compliance setup."
-    },
-    {
-      id: "email",
-      name: "Email",
-      bestFor: "Good for receipts, confirmations, and backup delivery.",
-      nextStep: "Connect an email sender like Resend, SendGrid, or SMTP."
-    }
-  ];
-
   return `
-    <section class="setup-hero">
-      <p class="eyebrow">Sending setup</p>
-      <h2>Messages are prepared here before real delivery is connected</h2>
+    <section class="setup-hero sending-hero">
+      <p class="eyebrow">WhatsApp sending</p>
+      <h2>Send from the owner’s own WhatsApp number</h2>
       <p>
-        Today Vouchly creates the message, adds the Google review link, and lets the owner copy or schedule it.
-        Real automatic sending starts after one provider is connected.
+        Vouchly prepares the message, adds the Google review link, and opens WhatsApp with the customer number filled.
+        The owner only reviews the text and taps Send.
       </p>
     </section>
     <section class="sending-readiness">
       ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
       ${readinessItem("2", "Message templates", state.templates.every((template) => template.text?.includes("{{link}}")), "Keep review link placeholder in request and reminder templates.")}
-      ${readinessItem("3", "Customer consent", Boolean(state.business.acceptedTermsAt), "Owner confirms anti-spam, honest-review, and customer-consent rules.")}
-      ${readinessItem("4", "Provider API", isAnyProviderConnected(), "Connect WhatsApp Business API, SMS, or email provider for automatic delivery.")}
+      ${readinessItem("3", "Customer permission", Boolean(state.business.acceptedTermsAt), "Owner confirms they will only message real customers who agreed to be contacted.")}
+      ${readinessItem("4", "WhatsApp ready", true, "Use the WhatsApp button on each customer to open the prepared message.")}
     </section>
-    <section class="sending-grid">
-      ${providers.map((provider) => renderProviderCard(provider)).join("")}
+    <section class="manual-send-grid">
+      ${manualSendCard("1", "Open WhatsApp", "Click WhatsApp on a customer row. Vouchly opens the owner's WhatsApp with the message ready.")}
+      ${manualSendCard("2", "Bulk prepare", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safe.")}
+      ${manualSendCard("3", "Generic message allowed", "If you do not want customer names, remove {{name}} from the template. Everyone gets the same review link message.")}
     </section>
     <section class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Owner workflow</p>
-          <h2>How a review request reaches the customer</h2>
+          <p class="eyebrow">Simple workflow</p>
+          <h2>What happens after clicking Schedule or WhatsApp?</h2>
         </div>
       </div>
       <div class="workflow-list">
-        ${workflowStep("1", "Add customer", "Owner adds name, phone/email, channel, and visit date.")}
-        ${workflowStep("2", "Preview message", "Vouchly generates the message from the template and inserts the Google review link.")}
-        ${workflowStep("3", "Manual send today", "Owner copies the message and sends it from their own WhatsApp/SMS/email account.")}
-        ${workflowStep("4", "Automatic later", "After provider connection, Vouchly can send and track delivery automatically.")}
+        ${workflowStep("1", "Preview msg", "Shows exactly what the customer will receive before anything is sent.")}
+        ${workflowStep("2", "WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send.")}
+        ${workflowStep("3", "Schedule reminder", "Creates a follow-up task for tomorrow at 5:00 PM. It does not send automatically.")}
+        ${workflowStep("4", "Mark done", "After the owner sends the message or finishes the follow-up, mark it done for tracking.")}
       </div>
     </section>
+  `;
+}
+
+function manualSendCard(number, title, body) {
+  return `
+    <article class="manual-send-card">
+      <strong>${escapeHtml(number)}</strong>
+      <div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(body)}</p>
+      </div>
+    </article>
   `;
 }
 
@@ -2980,8 +2976,8 @@ function bulkQueueRequests() {
     }));
 
     appMessage = isAnyProviderConnected()
-      ? `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared for connected delivery.`
-      : `${customersToSchedule.length} pending review request${customersToSchedule.length === 1 ? "" : "s"} prepared. Open WhatsApp or copy the message to send manually until a provider is connected.`;
+      ? `${customersToSchedule.length} pending reminder${customersToSchedule.length === 1 ? "" : "s"} prepared for connected delivery.`
+      : `${customersToSchedule.length} reminder${customersToSchedule.length === 1 ? "" : "s"} prepared for today at 6:00 PM. This does not auto-send; open WhatsApp and tap Send for each customer.`;
 
     return {
       ...current,
@@ -3021,12 +3017,13 @@ function setPreferredProvider(providerId) {
 
 function showProviderNextStep(providerId) {
   const guide = {
-    whatsapp: "Next: create/verify a Meta WhatsApp Business account, choose Cloud API or a BSP, then connect the API token and phone number.",
-    sms: "Next: choose an SMS provider, verify sender ID/compliance, then connect the API key.",
-    email: "Next: choose an email provider, verify the domain, then connect the API key."
+    whatsapp: "Current mode: Vouchly opens the owner's WhatsApp with the message ready. The owner checks it and taps Send. Automatic background sending can be added later.",
+    sms: "SMS is optional later. Most local customers respond better on WhatsApp first.",
+    email: "Email is optional later for receipts, reports, and backup delivery."
   };
 
   appMessage = guide[providerId] ?? "Choose a sending provider first.";
+  window.alert(appMessage);
   render();
 }
 

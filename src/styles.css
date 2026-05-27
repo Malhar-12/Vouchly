@@ -1829,7 +1829,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--line);
-  padding: 10px 12px;
+  padding: 8px 12px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -1883,6 +1883,12 @@ th {
   gap: 16px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 22px;
+}
+
+.sending-hero {
+  background:
+    radial-gradient(circle at top right, rgba(18, 107, 104, 0.16), transparent 20rem),
+    #e8f4f1;
 }
 
 .sending-readiness {
@@ -1984,6 +1990,47 @@ th {
   flex-wrap: wrap;
   margin-top: auto;
   justify-content: flex-start;
+}
+
+.manual-send-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.manual-send-card {
+  align-items: flex-start;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto 1fr;
+  padding: 18px;
+}
+
+.manual-send-card strong {
+  align-items: center;
+  background: var(--brand);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.manual-send-card h3 {
+  margin-bottom: 6px;
+}
+
+.manual-send-card p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 0;
 }
 
 .workflow-list {
@@ -2253,6 +2300,7 @@ th {
   .split-grid,
   .template-grid,
   .sending-grid,
+  .manual-send-grid,
   .legal-grid,
   .settings-form,
   .plan-grid,
