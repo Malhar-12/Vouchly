@@ -36,6 +36,10 @@ Run `supabase-schema.sql` in the Supabase SQL Editor before using the live app.
 
 The app stores each signed-in user's workspace in `vouchly_workspaces` with row-level security enabled.
 
+## Security setup
+
+Read `SECURITY.md` before taking real customers. It includes the Supabase RLS verification query, Render security headers, and the rules for keeping billing and WhatsApp provider secrets out of the frontend.
+
 ## Next production steps
 
 - Add business-owned sender connections

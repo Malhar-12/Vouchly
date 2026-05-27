@@ -1282,19 +1282,29 @@ h2 {
   margin: 6px 0 12px;
 }
 
-.meter-track {
+.meter-progress {
+  appearance: none;
   background: #e6edf0;
+  border: 0;
   border-radius: 999px;
   height: 8px;
   overflow: hidden;
+  width: 100%;
 }
 
-.meter-track span {
+.meter-progress::-webkit-progress-bar {
+  background: #e6edf0;
+  border-radius: 999px;
+}
+
+.meter-progress::-webkit-progress-value {
   background: linear-gradient(90deg, var(--brand), #2aa889);
-  border-radius: inherit;
-  display: block;
-  height: 100%;
-  min-width: 4px;
+  border-radius: 999px;
+}
+
+.meter-progress::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--brand), #2aa889);
+  border-radius: 999px;
 }
 
 .quick-action-card {

@@ -1231,7 +1231,7 @@ function renderAuth() {
           ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${pendingPlan.originalPrice ? `${escapeHtml(pendingPlan.offer)}: ${escapeHtml(pendingPlan.price)}` : escapeHtml(pendingPlan.price)}</small></div>` : ""}
           <form id="auth-form" class="auth-form">
             <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
-            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
+            <input name="password" type="password" placeholder="${isSignup ? "Create a strong password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="${isSignup ? 10 : 6}" />
             <button class="primary-button" type="submit">${isSignup ? "Create free account" : "Sign in to Vouchly"}</button>
           </form>
           ${
@@ -1519,7 +1519,7 @@ function usageMeter(label, value, limit, reverse = false) {
         <span>${escapeHtml(Number.isFinite(limit) ? ` / ${limit}` : "")}</span>
       </div>
       <p>${escapeHtml(label)}</p>
-      <div class="meter-track"><span style="width: ${visualPercent}%"></span></div>
+      <progress class="meter-progress" max="100" value="${visualPercent}">${visualPercent}%</progress>
     </article>
   `;
 }
@@ -2329,7 +2329,7 @@ function renderVouchlyLandingAuth() {
           ${isSignup ? `<div class="selected-plan-note"><span>Selected plan</span><strong>${escapeHtml(pendingPlan.name)}</strong><small>${pendingPlan.originalPrice ? `${escapeHtml(pendingPlan.offer)}: ${escapeHtml(pendingPlan.price)}` : escapeHtml(pendingPlan.price)}</small></div>` : ""}
           <form id="auth-form" class="auth-form">
             <input name="email" type="email" placeholder="you@business.com" autocomplete="off" data-private-input required />
-            <input name="password" type="password" placeholder="${isSignup ? "Create a password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="6" />
+            <input name="password" type="password" placeholder="${isSignup ? "Create a strong password" : "Your password"}" autocomplete="new-password" data-private-input required minlength="${isSignup ? 10 : 6}" />
             <button class="primary-button" type="submit">${isSignup ? "Create free account →" : "Sign in to Vouchly →"}</button>
           </form>
           ${authMessage ? `<div class="auth-message">${escapeHtml(authMessage)}</div>` : ""}
@@ -2516,6 +2516,14 @@ async function submitAuth(event) {
   event.preventDefault();
   const { email, password } = Object.fromEntries(new FormData(event.currentTarget).entries());
   const cleanEmail = String(email).trim().toLowerCase();
+
+  if (authMode === "signup" && String(password).length < 10) {
+    authNeedsConfirmation = false;
+    authMessage = "Use at least 10 characters for the password. Longer is safer.";
+    render();
+    return;
+  }
+
   lastAuthEmail = cleanEmail;
   window.localStorage.setItem("vouchly-pending-email", cleanEmail);
   authNeedsConfirmation = false;
