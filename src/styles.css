@@ -1904,7 +1904,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--line);
-  padding: 8px 12px;
+  padding: 7px 12px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -1943,6 +1943,47 @@ th {
   background: #eef3f5;
   color: #64727d;
   text-transform: capitalize;
+}
+
+.outbox-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 18px 0 22px;
+}
+
+.outbox-stat {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.outbox-stat strong {
+  display: block;
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.outbox-stat span,
+.outbox-stat small {
+  color: var(--muted);
+  display: block;
+}
+
+.outbox-stat span {
+  font-weight: 800;
+}
+
+.outbox-section + .outbox-section {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 24px;
+}
+
+.outbox-section h3 {
+  margin-bottom: 12px;
 }
 
 .empty-state {
@@ -2406,6 +2447,7 @@ th {
   .template-grid,
   .sending-grid,
   .manual-send-grid,
+  .outbox-summary,
   .legal-grid,
   .settings-form,
   .plan-grid,

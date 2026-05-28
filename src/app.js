@@ -478,7 +478,7 @@ function taskRecordKey(task) {
 
 function taskDayKey(task) {
   const dueDate = String(task.dueAt ?? "").slice(0, 10);
-  return `${task.title}|${task.customerName}|${task.channel}|${dueDate}|${task.status}`.toLowerCase();
+  return `${task.title}|${task.customerName}|${task.channel}|${task.purpose ?? ""}|${dueDate}|${task.status}`.toLowerCase();
 }
 
 function normalizeTasks(tasks = []) {
@@ -548,6 +548,27 @@ function formatTaskStatus(status = "") {
   if (status === "scheduled") return "prepared";
   if (status === "done") return "sent manually";
   return status || "needs follow-up";
+}
+
+function inferTaskPurpose(task = {}) {
+  const title = String(task.title ?? "").toLowerCase();
+
+  if (task.purpose) return task.purpose;
+  if (title.includes("reminder")) return "review_reminder";
+  if (title.includes("offer")) return "offer";
+  if (title.includes("launch")) return "launch";
+  if (title.includes("festival")) return "festival";
+  return "review";
+}
+
+function findCustomerForTask(task = {}) {
+  return (
+    state.customers.find((customer) => customer.id === task.customerId) ??
+    state.customers.find(
+      (customer) => customer.name === task.customerName && customer.channel === task.channel
+    ) ??
+    state.customers.find((customer) => customer.name === task.customerName)
+  );
 }
 
 async function init() {
@@ -948,8 +969,10 @@ function queueReviewRequest(customerId, purpose = "review_reminder") {
         {
           id: nextId(current.tasks),
           title: option.taskTitle,
+          customerId: customer.id,
           customerName: customer.name,
           channel: customer.channel,
+          purpose,
           dueAt,
           status: "scheduled"
         },
@@ -1062,7 +1085,7 @@ function render() {
         </div>
         ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
         ${setupComplete ? navButton("customers", "Customers") : ""}
-        ${setupComplete ? navButton("automations", "Follow-ups") : ""}
+        ${setupComplete ? navButton("automations", "Outbox") : ""}
         ${setupComplete ? navButton("sending", "Sending") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
@@ -1537,7 +1560,7 @@ function renderDashboard() {
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
       ${metricCard("Review rate", `${completionRate()}%`, "marked reviewed")}
       ${metricCard("Pending", pending, "need review request")}
-      ${metricCard("Follow-ups", scheduled, "prepared reminders")}
+      ${metricCard("Outbox", scheduled, "prepared messages")}
     </section>
     <section class="split-grid">
       <div class="panel">
@@ -1553,8 +1576,8 @@ function renderDashboard() {
       <div class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Follow-ups</p>
-            <h2>Prepared reminders</h2>
+            <p class="eyebrow">Outbox</p>
+            <h2>Messages ready to send</h2>
           </div>
           <button class="ghost-button small" data-view="automations">Open</button>
         </div>
@@ -1619,7 +1642,7 @@ function renderDashboardQuickActions(pending, scheduled) {
     <section class="quick-actions">
       ${quickActionCard("Add customer", "Add a new customer after a sale, visit, or service.", "customers", "")}
       ${quickActionCard("Prepare messages", `${pending} pending customer${pending === 1 ? "" : "s"} can be prepared with auto-filled names.`, "", "bulk-send")}
-      ${quickActionCard("Follow-ups", `${scheduled} prepared reminder${scheduled === 1 ? "" : "s"} ready to send or mark done.`, "automations", "")}
+      ${quickActionCard("Outbox", `${scheduled} prepared message${scheduled === 1 ? "" : "s"} ready for WhatsApp.`, "automations", "")}
       ${quickActionCard("Sending setup", getSendingModeLabel(), "sending", "")}
     </section>
   `;
@@ -1943,19 +1966,44 @@ function renderCustomerEditor() {
 }
 
 function renderAutomations() {
+  const readyTasks = state.tasks.filter((task) => task.status !== "done");
+  const sentTasks = state.tasks.filter((task) => task.status === "done");
+
   return `
-    <section class="panel">
+    <section class="panel outbox-panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Follow-ups</p>
-          <h2>Prepared customer follow-ups</h2>
+          <p class="eyebrow">Outbox</p>
+          <h2>Prepared messages waiting for WhatsApp</h2>
         </div>
       </div>
       <div class="list-note">
-        These are prepared owner reminders. Vouchly does not secretly send messages in the background; open WhatsApp, review the message, and tap Send.
+        Vouchly auto-fills the customer name, business name, and review link. Open WhatsApp, check the message, tap Send, then mark it sent here.
       </div>
-      ${taskRows(state.tasks)}
+      <div class="outbox-summary">
+        ${outboxStat("Ready", readyTasks.length, "open WhatsApp and send")}
+        ${outboxStat("Sent", sentTasks.length, "marked sent manually")}
+        ${outboxStat("Total", state.tasks.length, "prepared messages")}
+      </div>
+      <div class="outbox-section">
+        <h3>Ready to send</h3>
+        ${taskRows(readyTasks, "No prepared messages waiting.")}
+      </div>
+      <div class="outbox-section">
+        <h3>Sent history</h3>
+        ${taskRows(sentTasks.slice(0, 20), "No sent messages yet.")}
+      </div>
     </section>
+  `;
+}
+
+function outboxStat(label, value, detail) {
+  return `
+    <article class="outbox-stat">
+      <strong>${escapeHtml(value)}</strong>
+      <span>${escapeHtml(label)}</span>
+      <small>${escapeHtml(detail)}</small>
+    </article>
   `;
 }
 
@@ -2065,9 +2113,9 @@ function formatProviderStatus(status) {
   return status.replaceAll("_", " ");
 }
 
-function taskRows(tasks) {
+function taskRows(tasks, emptyMessage = "No prepared messages yet.") {
   if (!tasks.length) {
-    return `<div class="empty-state">No prepared follow-ups yet.</div>`;
+    return `<div class="empty-state">${escapeHtml(emptyMessage)}</div>`;
   }
 
   return `
@@ -2085,22 +2133,31 @@ function taskRows(tasks) {
         </thead>
         <tbody>
           ${tasks
-            .map(
-              (task) => `
+            .map((task) => {
+              const customer = findCustomerForTask(task);
+              const purpose = inferTaskPurpose(task);
+              const canOpenWhatsApp = Boolean(customer && task.channel === "whatsapp" && task.status !== "done");
+
+              return `
                 <tr>
                   <td>${escapeHtml(task.title)}</td>
                   <td>${escapeHtml(task.customerName)}</td>
                   <td>${escapeHtml(task.channel)}</td>
                   <td>${escapeHtml(task.dueAt)}</td>
                   <td><span class="status ${escapeHtml(task.status)}">${escapeHtml(formatTaskStatus(task.status))}</span></td>
-                  <td>
+                  <td class="row-actions">
+                    ${
+                      canOpenWhatsApp
+                        ? `<button class="whatsapp-button small" data-action="open-task-whatsapp" data-id="${task.id}" data-purpose="${escapeHtml(purpose)}">Open WhatsApp</button>`
+                        : ""
+                    }
                     <button class="ghost-button small" data-action="complete-task" data-id="${task.id}">
                       ${task.status === "done" ? "Sent" : "Mark sent"}
                     </button>
                   </td>
                 </tr>
-              `
-            )
+              `;
+            })
             .join("")}
         </tbody>
       </table>
@@ -2757,6 +2814,7 @@ function bindEvents() {
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id, purpose || "review");
       if (action === "open-whatsapp-message") openWhatsAppMessage(id, purpose || messagePreviewPurpose);
+      if (action === "open-task-whatsapp") openTaskWhatsApp(id);
       if (action === "copy-preview-message") copyPreviewMessage(purpose || messagePreviewPurpose);
       if (action === "close-preview") closeMessagePreview();
       if (action === "edit-customer") editCustomer(id);
@@ -3120,8 +3178,10 @@ function bulkQueueRequests(purpose = bulkCampaignPurpose) {
     const tasks = customersToSchedule.map((customer, index) => ({
       id: Date.now() + index,
       title: option.taskTitle,
+      customerId: customer.id,
       customerName: customer.name,
       channel: customer.channel,
+      purpose,
       dueAt: todayDueAt,
       status: "scheduled"
     }));
@@ -3143,12 +3203,28 @@ function bulkQueueRequests(purpose = bulkCampaignPurpose) {
 }
 
 function completeTask(taskId) {
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  appMessage = task ? `${task.customerName} marked as sent.` : "";
+
   setState((current) => ({
     ...current,
     tasks: current.tasks.map((task) =>
       task.id === taskId ? { ...task, status: "done" } : task
     )
   }));
+}
+
+async function openTaskWhatsApp(taskId) {
+  const task = state.tasks.find((entry) => entry.id === taskId);
+  const customer = task ? findCustomerForTask(task) : null;
+
+  if (!task || !customer) {
+    appMessage = "Customer not found for this outbox item. Prepare the message again from Customers.";
+    render();
+    return;
+  }
+
+  await openWhatsAppMessage(customer.id, inferTaskPurpose(task));
 }
 
 function setPreferredProvider(providerId) {
