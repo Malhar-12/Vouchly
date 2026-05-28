@@ -2126,7 +2126,7 @@ function renderTemplates() {
           .map(
             (template) => `
               <article class="template-card">
-                <span>${escapeHtml(template.channel)} · ${escapeHtml(template.purpose ?? "message")}</span>
+                <span>${escapeHtml(template.channel)} - ${escapeHtml(templatePurposeLabel(template))}</span>
                 <h3>${escapeHtml(template.name)}</h3>
                 <p>${escapeHtml(template.text)}</p>
               </article>
@@ -2185,9 +2185,43 @@ function renderLegal() {
   `;
 }
 
+function templateFormFieldName(template, index) {
+  const purpose = template.purpose ?? "";
+
+  if (purpose === "review" || index === 0) return "firstTemplate";
+  if (purpose === "review_reminder" || index === 1) return "reminderTemplate";
+
+  return `template_${purpose || template.id}`;
+}
+
+function templatePurposeLabel(template) {
+  return getMessageTypeOption(template.purpose).label;
+}
+
+function renderTemplateEditorFields() {
+  return state.templates
+    .map((template, index) => {
+      const fieldName = templateFormFieldName(template, index);
+      const purposeLabel = templatePurposeLabel(template);
+      const helpText =
+        template.purpose === "review"
+          ? "Main review request. Use {{name}}, {{business}}, and {{link}}."
+          : template.purpose === "review_reminder"
+            ? "Review reminder for customers who did not review yet."
+            : "Campaign/follow-up message. Use {{name}}, {{business}}, and {{offer}}.";
+
+      return `
+        <label class="wide">
+          ${escapeHtml(purposeLabel)} message
+          <small>${escapeHtml(helpText)}</small>
+          <textarea name="${escapeHtml(fieldName)}" rows="4">${escapeHtml(template.text)}</textarea>
+        </label>
+      `;
+    })
+    .join("");
+}
+
 function renderSettings(isOnboarding = false) {
-  const firstTemplate = state.templates[0] ?? defaultState.templates[0];
-  const reminderTemplate = state.templates[1] ?? defaultState.templates[1];
   const selectedPlan = plans.find((plan) => plan.id === state.business.plan) ?? plans[0];
 
   return `
@@ -2250,18 +2284,9 @@ function renderSettings(isOnboarding = false) {
           Sender name
           <input name="senderName" value="${escapeHtml(state.business.senderName)}" />
         </label>
-        <label class="wide">
-          First review request message
-          <small>Use <code>{{name}}</code> once. Vouchly fills each customer's real name from the customer list.</small>
-          <textarea name="firstTemplate" rows="4">${escapeHtml(firstTemplate.text)}</textarea>
-        </label>
-        <label class="wide">
-          Reminder message
-          <small>For review reminders. Offer and launch follow-up templates are shown in the Templates tab.</small>
-          <textarea name="reminderTemplate" rows="4">${escapeHtml(reminderTemplate.text)}</textarea>
-        </label>
+        ${renderTemplateEditorFields()}
         <div class="template-help wide">
-          You do not type every customer name manually. Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>; Vouchly fills them automatically when opening WhatsApp.
+          You do not type every customer name manually. Use <code>{{name}}</code>, <code>{{business}}</code>, <code>{{link}}</code>, and <code>{{offer}}</code>; Vouchly fills them automatically when opening WhatsApp.
         </div>
         <label class="terms-check wide">
           <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
@@ -3028,7 +3053,13 @@ function normalizeDateValue(value = "") {
 function saveSettings(event) {
   event.preventDefault();
   const form = Object.fromEntries(new FormData(event.currentTarget).entries());
-  const { firstTemplate, reminderTemplate, acceptTerms, ...business } = form;
+  const { acceptTerms, ...formValues } = form;
+  const templateFieldNames = new Set(
+    state.templates.map((template, index) => templateFormFieldName(template, index))
+  );
+  const business = Object.fromEntries(
+    Object.entries(formValues).filter(([key]) => !templateFieldNames.has(key))
+  );
   const missingFields = requiredSetupFields(form);
 
   if (missingFields.length) {
@@ -3056,15 +3087,8 @@ function saveSettings(event) {
       setupComplete: true
     },
     templates: current.templates.map((template, index) => {
-      if (index === 0) {
-        return { ...template, text: firstTemplate };
-      }
-
-      if (index === 1) {
-        return { ...template, text: reminderTemplate };
-      }
-
-      return template;
+      const fieldName = templateFormFieldName(template, index);
+      return form[fieldName] !== undefined ? { ...template, text: form[fieldName] } : template;
     })
   }));
 
