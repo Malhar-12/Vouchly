@@ -175,13 +175,29 @@ const defaultState = {
       id: 21,
       name: "First request",
       channel: "whatsapp",
+      purpose: "review",
       text: "Hi {{name}}, thank you for choosing {{business}}. Could you share a quick Google review? {{link}}"
     },
     {
       id: 22,
       name: "Reminder",
-      channel: "sms",
+      channel: "whatsapp",
+      purpose: "review_reminder",
       text: "Hi {{name}}, quick reminder from {{business}}. Your review helps local customers find us: {{link}}"
+    },
+    {
+      id: 23,
+      name: "Offer follow-up",
+      channel: "whatsapp",
+      purpose: "offer",
+      text: "Hi {{name}}, {{business}} has a new offer for returning customers: {{offer}}. Reply here if you want details."
+    },
+    {
+      id: 24,
+      name: "New launch update",
+      channel: "whatsapp",
+      purpose: "launch",
+      text: "Hi {{name}}, quick update from {{business}}: we just launched {{offer}}. Thought you may like to know."
     }
   ],
   deletedCustomerKeys: []
@@ -259,9 +275,18 @@ function mergeState(nextState = {}) {
       status: savedCustomerStatusMap[customer.status] ?? customer.status
     })),
     tasks: normalizeTasks(tasks),
-    templates: nextState.templates ?? defaultState.templates,
+    templates: mergeTemplates(nextState.templates),
     deletedCustomerKeys
   };
+}
+
+function mergeTemplates(savedTemplates = []) {
+  const savedByName = new Map(savedTemplates.map((template) => [template.name, template]));
+
+  return defaultState.templates.map((defaultTemplate) => ({
+    ...defaultTemplate,
+    ...(savedByName.get(defaultTemplate.name) ?? {})
+  }));
 }
 
 function saveLocalState() {
@@ -827,12 +852,15 @@ function requiredSetupFields(form) {
 
 function buildMessage(customer) {
   const template =
-    state.templates.find((item) => item.channel === customer.channel) ?? state.templates[0];
+    state.templates.find((item) => item.purpose === "review" && item.channel === customer.channel) ??
+    state.templates.find((item) => item.purpose === "review") ??
+    state.templates[0];
 
   return template.text
     .replaceAll("{{name}}", customer.name)
     .replaceAll("{{business}}", state.business.name)
-    .replaceAll("{{link}}", state.business.googleReviewLink || "[Google review link]");
+    .replaceAll("{{link}}", state.business.googleReviewLink || "[Google review link]")
+    .replaceAll("{{offer}}", "your latest offer or update");
 }
 
 function queueReviewRequest(customerId) {
@@ -1865,10 +1893,10 @@ function renderSending() {
   return `
     <section class="setup-hero sending-hero">
       <p class="eyebrow">WhatsApp sending</p>
-      <h2>Send from the owner’s own WhatsApp number</h2>
+      <h2>Send from the owner's own WhatsApp number</h2>
       <p>
-        Vouchly prepares the message, adds the Google review link, and opens WhatsApp with the customer number filled.
-        The owner only reviews the text and taps Send.
+        Vouchly reads the saved customer name and phone, fills the message automatically, adds the Google review link,
+        and opens WhatsApp. The owner only checks the message and taps Send.
       </p>
     </section>
     <section class="sending-readiness">
@@ -1878,9 +1906,10 @@ function renderSending() {
       ${readinessItem("4", "WhatsApp ready", true, "Use the WhatsApp button on each customer to open the prepared message.")}
     </section>
     <section class="manual-send-grid">
-      ${manualSendCard("1", "Open WhatsApp", "Click WhatsApp on a customer row. Vouchly opens the owner's WhatsApp with the message ready.")}
-      ${manualSendCard("2", "Bulk prepare", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safe.")}
-      ${manualSendCard("3", "Generic message allowed", "If you do not want customer names, remove {{name}} from the template. Everyone gets the same review link message.")}
+      ${manualSendCard("1", "Names auto-fill", "Add the customer once. {{name}} becomes Priya, Rahul, or that exact customer automatically.")}
+      ${manualSendCard("2", "Open WhatsApp", "Click WhatsApp on a customer row. Vouchly opens the owner's WhatsApp with the message ready.")}
+      ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
+      ${manualSendCard("4", "Bulk prepare", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safe.")}
     </section>
     <section class="panel">
       <div class="panel-head">
@@ -1890,9 +1919,9 @@ function renderSending() {
         </div>
       </div>
       <div class="workflow-list">
-        ${workflowStep("1", "Preview msg", "Shows exactly what the customer will receive before anything is sent.")}
-        ${workflowStep("2", "WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send.")}
-        ${workflowStep("3", "Schedule reminder", "Creates a follow-up task for tomorrow at 5:00 PM. It does not send automatically.")}
+        ${workflowStep("1", "Preview msg", "Shows the final message with the customer's name, your business name, and your Google review link filled in.")}
+        ${workflowStep("2", "WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send from their own number.")}
+        ${workflowStep("3", "Schedule reminder", "Creates a reminder task for tomorrow at 5:00 PM. At that time, open WhatsApp and tap Send.")}
         ${workflowStep("4", "Mark done", "After the owner sends the message or finishes the follow-up, mark it done for tracking.")}
       </div>
     </section>
@@ -2015,21 +2044,29 @@ function renderTemplates() {
       <div class="panel-head">
         <div>
           <p class="eyebrow">Templates</p>
-          <h2>Message templates</h2>
+          <h2>Message templates with auto-fill fields</h2>
         </div>
+      </div>
+      <div class="template-explainer">
+        <strong>No manual name typing needed.</strong>
+        <span>When you open WhatsApp for a customer, Vouchly replaces <code>{{name}}</code> with that customer's name, <code>{{business}}</code> with your business name, and <code>{{link}}</code> with your Google review link.</span>
       </div>
       <div class="template-grid">
         ${state.templates
           .map(
             (template) => `
               <article class="template-card">
-                <span>${escapeHtml(template.channel)}</span>
+                <span>${escapeHtml(template.channel)} · ${escapeHtml(template.purpose ?? "message")}</span>
                 <h3>${escapeHtml(template.name)}</h3>
                 <p>${escapeHtml(template.text)}</p>
               </article>
             `
           )
           .join("")}
+      </div>
+      <div class="template-explainer soft">
+        <strong>Follow-ups are not only for reviews.</strong>
+        <span>You can also use Vouchly for sale reminders, new product launches, festival offers, service reminders, and loyalty messages. Keep review requests honest; do not offer rewards in exchange for positive reviews.</span>
       </div>
     </section>
   `;
@@ -2145,14 +2182,16 @@ function renderSettings(isOnboarding = false) {
         </label>
         <label class="wide">
           First review request message
+          <small>Use <code>{{name}}</code> once. Vouchly fills each customer's real name from the customer list.</small>
           <textarea name="firstTemplate" rows="4">${escapeHtml(firstTemplate.text)}</textarea>
         </label>
         <label class="wide">
           Reminder message
+          <small>For review reminders. Offer and launch follow-up templates are shown in the Templates tab.</small>
           <textarea name="reminderTemplate" rows="4">${escapeHtml(reminderTemplate.text)}</textarea>
         </label>
         <div class="template-help wide">
-          Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>. Vouchly adds the Google review link automatically.
+          You do not type every customer name manually. Use <code>{{name}}</code>, <code>{{business}}</code>, and <code>{{link}}</code>; Vouchly fills them automatically when opening WhatsApp.
         </div>
         <label class="terms-check wide">
           <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
