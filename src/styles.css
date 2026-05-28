@@ -1449,6 +1449,30 @@ h2 {
   min-height: 190px;
 }
 
+.preview-type-row {
+  align-items: center;
+  background: var(--soft);
+  border: 1px solid #b7dcd6;
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 0.45fr) 1fr;
+  margin: 14px 0;
+  padding: 12px;
+}
+
+.preview-type-row label {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+}
+
+.preview-type-row span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
 .modal-actions {
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -1573,6 +1597,36 @@ h2 {
 
 .list-note {
   margin-bottom: 12px;
+}
+
+.campaign-toolbar {
+  align-items: center;
+  background:
+    radial-gradient(circle at top right, rgba(18, 107, 104, 0.1), transparent 12rem),
+    #fbfdfd;
+  border: 1px solid #b7dcd6;
+  border-radius: 16px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr minmax(220px, 0.45fr) auto;
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.campaign-toolbar strong,
+.campaign-toolbar span {
+  display: block;
+}
+
+.campaign-toolbar strong {
+  color: var(--brand-strong);
+  margin-bottom: 4px;
+}
+
+.campaign-toolbar span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .pagination-bar {
@@ -2382,7 +2436,9 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .list-toolbar {
+  .list-toolbar,
+  .campaign-toolbar,
+  .preview-type-row {
     grid-template-columns: 1fr;
   }
 
