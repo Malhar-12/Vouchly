@@ -250,6 +250,7 @@ let syncMessage = "Checking account...";
 let saveTimer = null;
 let pendingPlanId = window.localStorage.getItem("vouchly-pending-plan") || "";
 let customerFilters = defaultCustomerFilters();
+let outboxFilters = defaultOutboxFilters();
 let messagePreviewCustomerId = null;
 let messagePreviewPurpose = "review";
 let bulkCampaignPurpose = "review";
@@ -623,6 +624,16 @@ function defaultCustomerFilters() {
     dateMode: "all",
     selectedDate: getTodayDateValue(),
     page: 1
+  };
+}
+
+function defaultOutboxFilters() {
+  return {
+    query: "",
+    status: "ready",
+    channel: "all",
+    dateMode: "today",
+    selectedDate: getTodayDateValue()
   };
 }
 
@@ -1968,6 +1979,9 @@ function renderCustomerEditor() {
 function renderAutomations() {
   const readyTasks = state.tasks.filter((task) => task.status !== "done");
   const sentTasks = state.tasks.filter((task) => task.status === "done");
+  const filteredTasks = filterOutboxTasks(state.tasks);
+  const readyFilteredTasks = filteredTasks.filter((task) => task.status !== "done");
+  const sentFilteredTasks = filteredTasks.filter((task) => task.status === "done");
 
   return `
     <section class="panel outbox-panel">
@@ -1985,16 +1999,71 @@ function renderAutomations() {
         ${outboxStat("Sent", sentTasks.length, "marked sent manually")}
         ${outboxStat("Total", state.tasks.length, "prepared messages")}
       </div>
+      <div class="outbox-toolbar">
+        <input data-outbox-filter="query" value="${escapeHtml(outboxFilters.query)}" placeholder="Search customer or task..." />
+        <select data-outbox-filter="status">
+          <option value="ready" ${outboxFilters.status === "ready" ? "selected" : ""}>Ready to send</option>
+          <option value="sent" ${outboxFilters.status === "sent" ? "selected" : ""}>Sent history</option>
+          <option value="all" ${outboxFilters.status === "all" ? "selected" : ""}>All messages</option>
+        </select>
+        <select data-outbox-filter="channel">
+          <option value="all" ${outboxFilters.channel === "all" ? "selected" : ""}>All channels</option>
+          <option value="whatsapp" ${outboxFilters.channel === "whatsapp" ? "selected" : ""}>WhatsApp</option>
+          <option value="sms" ${outboxFilters.channel === "sms" ? "selected" : ""}>SMS</option>
+          <option value="email" ${outboxFilters.channel === "email" ? "selected" : ""}>Email</option>
+        </select>
+        <select data-outbox-filter="dateMode">
+          <option value="today" ${outboxFilters.dateMode === "today" ? "selected" : ""}>Today</option>
+          <option value="tomorrow" ${outboxFilters.dateMode === "tomorrow" ? "selected" : ""}>Tomorrow</option>
+          <option value="all" ${outboxFilters.dateMode === "all" ? "selected" : ""}>All dates</option>
+          <option value="custom" ${outboxFilters.dateMode === "custom" ? "selected" : ""}>Choose date</option>
+        </select>
+        <input
+          data-outbox-filter="selectedDate"
+          type="date"
+          value="${escapeHtml(outboxFilters.selectedDate)}"
+          ${outboxFilters.dateMode === "custom" ? "" : "disabled"}
+        />
+        <button class="ghost-button small" data-action="clear-outbox-filters" type="button">Clear filters</button>
+      </div>
+      <div class="result-count">
+        Showing ${filteredTasks.length} of ${state.tasks.length} prepared messages
+      </div>
       <div class="outbox-section">
         <h3>Ready to send</h3>
-        ${taskRows(readyTasks, "No prepared messages waiting.")}
+        ${taskRows(readyFilteredTasks, "No ready messages match this view.")}
       </div>
       <div class="outbox-section">
         <h3>Sent history</h3>
-        ${taskRows(sentTasks.slice(0, 20), "No sent messages yet.")}
+        ${taskRows(sentFilteredTasks.slice(0, 20), "No sent messages match this view.")}
       </div>
     </section>
   `;
+}
+
+function filterOutboxTasks(tasks) {
+  const query = outboxFilters.query.trim().toLowerCase();
+  const targetDate =
+    outboxFilters.dateMode === "today"
+      ? getTodayDateValue()
+      : outboxFilters.dateMode === "tomorrow"
+        ? getDateValueFromToday(1)
+        : outboxFilters.dateMode === "custom"
+          ? outboxFilters.selectedDate
+          : "";
+
+  return tasks.filter((task) => {
+    const searchable = `${task.title} ${task.customerName} ${task.channel}`.toLowerCase();
+    const matchesQuery = !query || searchable.includes(query);
+    const matchesStatus =
+      outboxFilters.status === "all" ||
+      (outboxFilters.status === "ready" && task.status !== "done") ||
+      (outboxFilters.status === "sent" && task.status === "done");
+    const matchesChannel = outboxFilters.channel === "all" || task.channel === outboxFilters.channel;
+    const matchesDate = !targetDate || String(task.dueAt ?? "").slice(0, 10) === targetDate;
+
+    return matchesQuery && matchesStatus && matchesChannel && matchesDate;
+  });
 }
 
 function outboxStat(label, value, detail) {
@@ -2826,6 +2895,7 @@ function bindEvents() {
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
       if (action === "clear-customer-filters") clearCustomerFilters();
+      if (action === "clear-outbox-filters") clearOutboxFilters();
       if (action === "load-demo") loadDemoWorkspace();
       if (action === "reset-workspace") resetWorkspaceData();
       if (action === "logout") logout();
@@ -2845,6 +2915,18 @@ function bindEvents() {
         ...customerFilters,
         [field.dataset.filter]: field.value,
         page: 1
+      };
+      render();
+    };
+
+    field.addEventListener("input", updateFilter);
+    field.addEventListener("change", updateFilter);
+  });
+  document.querySelectorAll("[data-outbox-filter]").forEach((field) => {
+    const updateFilter = () => {
+      outboxFilters = {
+        ...outboxFilters,
+        [field.dataset.outboxFilter]: field.value
       };
       render();
     };
@@ -2889,6 +2971,11 @@ function clearCustomerFilters() {
   render();
 }
 
+function clearOutboxFilters() {
+  outboxFilters = defaultOutboxFilters();
+  render();
+}
+
 function loadDemoWorkspace() {
   const hasWorkspaceData = isSetupComplete() && (state.customers.length || state.tasks.length);
   const shouldReplace =
@@ -2900,6 +2987,7 @@ function loadDemoWorkspace() {
   }
 
   customerFilters = defaultCustomerFilters();
+  outboxFilters = defaultOutboxFilters();
   messagePreviewCustomerId = null;
   editingCustomerId = null;
   appMessage = "Demo workspace loaded. You can now explore the full flow safely.";
@@ -2916,6 +3004,7 @@ function resetWorkspaceData() {
   }
 
   customerFilters = defaultCustomerFilters();
+  outboxFilters = defaultOutboxFilters();
   messagePreviewCustomerId = null;
   editingCustomerId = null;
   appMessage = "Workspace reset. Start clean setup or load demo data.";
