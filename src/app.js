@@ -943,6 +943,20 @@ function buildMessage(customer, purpose = "review") {
     .replaceAll("{{offer}}", "your latest offer or update");
 }
 
+function formatDueAt(dueAt = "") {
+  const [date = "", time = ""] = String(dueAt).split(" ");
+  if (!time) {
+    return date;
+  }
+
+  const [hourValue = "0", minute = "00"] = time.split(":");
+  const hour = Number(hourValue);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+
+  return `${date}, ${displayHour}:${minute} ${suffix}`;
+}
+
 function queueReviewRequest(customerId, purpose = "review_reminder") {
   const requestLimitMessage = getRequestLimitMessage();
   if (requestLimitMessage) {
@@ -969,7 +983,7 @@ function queueReviewRequest(customerId, purpose = "review_reminder") {
       return current;
     }
 
-    appMessage = `${customer.name} ${option.label.toLowerCase()} prepared for tomorrow at ${option.dueTime}. Open WhatsApp and tap Send when ready.`;
+    appMessage = `${customer.name} ${option.label.toLowerCase()} prepared for ${formatDueAt(dueAt)}. This is not auto-sent; open WhatsApp and tap Send.`;
 
     return {
       ...current,
@@ -1843,12 +1857,12 @@ function customerRows(customers, startIndex = 0) {
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(formatCustomerStatus(customer.status))}</span></td>
                   <td class="row-actions">
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}" data-purpose="review">Preview</button>
-                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}" data-purpose="review">WhatsApp</button>
+                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}" data-purpose="review">Open WhatsApp</button>
                     <button class="ghost-button small" data-action="edit-customer" data-id="${customer.id}">Edit</button>
                     ${
                       customer.status === "reviewed"
                         ? `<span class="row-note">Reviewed</span>`
-                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}" data-purpose="review_reminder">Follow-up</button>
+                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}" data-purpose="review_reminder">Prepare follow-up</button>
                            <button class="primary-button small" data-action="mark-reviewed" data-id="${customer.id}">Mark reviewed</button>`
                     }
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
@@ -1992,10 +2006,10 @@ function renderAutomations() {
         </div>
       </div>
       <div class="list-note">
-        Vouchly auto-fills the customer name, business name, and review link. Open WhatsApp, check the message, tap Send, then mark it sent here.
+        Schedule means Vouchly prepares the message for that time. It does not send automatically yet. Open WhatsApp, check the auto-filled message, tap Send, then mark it sent here.
       </div>
       <div class="outbox-summary">
-        ${outboxStat("Ready", readyTasks.length, "open WhatsApp and send")}
+        ${outboxStat("Ready", readyTasks.length, "prepared, not auto-sent")}
         ${outboxStat("Sent", sentTasks.length, "marked sent manually")}
         ${outboxStat("Total", state.tasks.length, "prepared messages")}
       </div>
@@ -2090,11 +2104,11 @@ function renderSending() {
       ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
       ${readinessItem("2", "Message templates", state.templates.every((template) => template.text?.includes("{{link}}")), "Keep review link placeholder in request and reminder templates.")}
       ${readinessItem("3", "Customer permission", Boolean(state.business.acceptedTermsAt), "Owner confirms they will only message real customers who agreed to be contacted.")}
-      ${readinessItem("4", "WhatsApp ready", true, "Use the WhatsApp button on each customer to open the prepared message.")}
+      ${readinessItem("4", "WhatsApp ready", true, "Use Open WhatsApp on each customer to send from the owner's own number.")}
     </section>
     <section class="manual-send-grid">
       ${manualSendCard("1", "Names auto-fill", "Add the customer once. {{name}} becomes Priya, Rahul, or that exact customer automatically.")}
-      ${manualSendCard("2", "Open WhatsApp", "Click WhatsApp on a customer row. Vouchly opens the owner's WhatsApp with the message ready.")}
+      ${manualSendCard("2", "Open WhatsApp", "Click Open WhatsApp on a customer row. Vouchly opens the owner's WhatsApp with the message ready.")}
       ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
       ${manualSendCard("4", "Bulk prepare", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safe.")}
     </section>
@@ -2102,13 +2116,13 @@ function renderSending() {
       <div class="panel-head">
         <div>
           <p class="eyebrow">Simple workflow</p>
-          <h2>What happens after clicking Schedule or WhatsApp?</h2>
+          <h2>What happens after clicking Schedule or Open WhatsApp?</h2>
         </div>
       </div>
       <div class="workflow-list">
         ${workflowStep("1", "Preview msg", "Shows the final message with the customer's name, your business name, and your Google review link filled in.")}
-        ${workflowStep("2", "WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send from their own number.")}
-        ${workflowStep("3", "Follow-up", "Creates a prepared reminder for tomorrow at 5:00 PM. At that time, open WhatsApp and tap Send.")}
+        ${workflowStep("2", "Open WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send from their own number.")}
+        ${workflowStep("3", "Prepare follow-up", "Creates a prepared reminder for tomorrow at 5:00 PM. At that time, open WhatsApp and tap Send.")}
         ${workflowStep("4", "Mark sent", "After the owner sends the message or finishes the follow-up, mark it sent for tracking.")}
       </div>
     </section>
@@ -2195,7 +2209,7 @@ function taskRows(tasks, emptyMessage = "No prepared messages yet.") {
             <th>Task</th>
             <th>Customer</th>
             <th>Channel</th>
-            <th>Due</th>
+            <th>Prepared for</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -2212,7 +2226,7 @@ function taskRows(tasks, emptyMessage = "No prepared messages yet.") {
                   <td>${escapeHtml(task.title)}</td>
                   <td>${escapeHtml(task.customerName)}</td>
                   <td>${escapeHtml(task.channel)}</td>
-                  <td>${escapeHtml(task.dueAt)}</td>
+                  <td>${escapeHtml(formatDueAt(task.dueAt))}</td>
                   <td><span class="status ${escapeHtml(task.status)}">${escapeHtml(formatTaskStatus(task.status))}</span></td>
                   <td class="row-actions">
                     ${
