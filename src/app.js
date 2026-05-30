@@ -473,6 +473,28 @@ function customerRecordKey(customer) {
   return `${customer.name}|${contact}|${customer.visitDate}`.toLowerCase();
 }
 
+function normalizePhone(value = "") {
+  return String(value).replace(/\D/g, "");
+}
+
+function normalizeEmail(value = "") {
+  return String(value).trim().toLowerCase();
+}
+
+function hasDuplicateCustomer(customers = [], nextCustomer = {}) {
+  const nextPhone = normalizePhone(nextCustomer.phone);
+  const nextEmail = normalizeEmail(nextCustomer.email);
+  const nextNameDate = `${nextCustomer.name}|${nextCustomer.visitDate}`.toLowerCase();
+
+  return customers.some((customer) => {
+    const phoneMatches = nextPhone && normalizePhone(customer.phone) === nextPhone;
+    const emailMatches = nextEmail && normalizeEmail(customer.email) === nextEmail;
+    const nameDateMatches = `${customer.name}|${customer.visitDate}`.toLowerCase() === nextNameDate;
+
+    return phoneMatches || emailMatches || nameDateMatches;
+  });
+}
+
 function taskRecordKey(task) {
   return `${task.title}|${task.customerName}|${task.channel}|${task.dueAt}`.toLowerCase();
 }
@@ -1709,6 +1731,7 @@ function renderCustomers() {
           <h2>Add customer and schedule a review request</h2>
         </div>
       </div>
+      ${renderCustomerPlanNotice()}
       <form class="inline-form" id="customer-form">
         <input name="name" placeholder="Customer name" required />
         <input name="phone" placeholder="Phone" />
@@ -1782,6 +1805,28 @@ function renderCustomers() {
       ${customerRows(visibleCustomers, startIndex)}
       ${customerPagination(currentPage, totalPages, filteredCustomers.length)}
     </section>
+  `;
+}
+
+function renderCustomerPlanNotice() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+  const customerLimit = usage.customerLimit === Infinity ? "Unlimited" : usage.customerLimit;
+  const requestLimit = usage.requestLimit === Infinity ? "Unlimited" : usage.requestLimit;
+  const accessMessage = getPlanAccessMessage();
+
+  return `
+    <div class="customer-usage-strip ${accessMessage ? "warning" : ""}">
+      <div>
+        <strong>${escapeHtml(plan.name)} usage</strong>
+        <span>
+          ${usage.customers}/${customerLimit} customers this month ·
+          ${usage.requests}/${requestLimit} prepared requests
+          ${usage.trialDaysLeft !== null ? ` · ${usage.trialDaysLeft} trial days left` : ""}
+        </span>
+      </div>
+      <small>${accessMessage ? escapeHtml(accessMessage) : "CSV import skips duplicates automatically."}</small>
+    </div>
   `;
 }
 
@@ -3036,6 +3081,19 @@ function addCustomer(event) {
 
   const form = new FormData(event.currentTarget);
   const customer = Object.fromEntries(form.entries());
+
+  if (!customer.phone?.trim() && !customer.email?.trim()) {
+    appMessage = "Add a phone number or email so Vouchly can prepare the request.";
+    render();
+    return;
+  }
+
+  if (hasDuplicateCustomer(state.customers, customer)) {
+    appMessage = `${customer.name} already exists for this contact or visit date. Duplicate not added.`;
+    render();
+    return;
+  }
+
   appMessage = `${customer.name} added to customers.`;
 
   setState((current) => ({
@@ -3077,14 +3135,54 @@ async function importCustomersFromCsv(event) {
       return;
     }
 
-    const customerLimitMessage = getCustomerLimitMessage(importedCustomers.length);
-    if (customerLimitMessage) {
-      appMessage = customerLimitMessage;
+    const accessMessage = getPlanAccessMessage();
+    if (isPlanLocked() || accessMessage.startsWith("Free trial ended")) {
+      appMessage = accessMessage;
       render();
       return;
     }
 
-    appMessage = `${importedCustomers.length} customer${importedCustomers.length === 1 ? "" : "s"} imported from CSV.`;
+    const plan = getCurrentPlan();
+    const usage = getPlanUsage(plan);
+    const currentMonthCapacity =
+      usage.customerLimit === Infinity ? Infinity : Math.max(0, usage.customerLimit - usage.customers);
+    const existingCustomers = [...state.customers];
+    const customersToImport = [];
+    let duplicateCount = 0;
+    let limitSkippedCount = 0;
+    let currentMonthImportedCount = 0;
+
+    importedCustomers.forEach((customer) => {
+      if (hasDuplicateCustomer(existingCustomers, customer) || hasDuplicateCustomer(customersToImport, customer)) {
+        duplicateCount += 1;
+        return;
+      }
+
+      if (isInCurrentMonth(customer.visitDate) && currentMonthImportedCount >= currentMonthCapacity) {
+        limitSkippedCount += 1;
+        return;
+      }
+
+      if (isInCurrentMonth(customer.visitDate)) {
+        currentMonthImportedCount += 1;
+      }
+
+      customersToImport.push(customer);
+    });
+
+    if (!customersToImport.length) {
+      appMessage =
+        duplicateCount || limitSkippedCount
+          ? `No new customers imported. Skipped ${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"} and ${limitSkippedCount} over plan limit.`
+          : "No new customers imported.";
+      render();
+      return;
+    }
+
+    appMessage =
+      `${customersToImport.length} customer${customersToImport.length === 1 ? "" : "s"} imported from CSV.` +
+      (duplicateCount ? ` ${duplicateCount} duplicate${duplicateCount === 1 ? "" : "s"} skipped.` : "") +
+      (limitSkippedCount ? ` ${limitSkippedCount} skipped because of plan limit.` : "");
     customerFilters = {
       ...defaultCustomerFilters(),
       dateMode: "all"
@@ -3093,7 +3191,7 @@ async function importCustomersFromCsv(event) {
     setState((current) => ({
       ...current,
       customers: [
-        ...importedCustomers.map((customer, index) => ({
+        ...customersToImport.map((customer, index) => ({
           id: nextId(current.customers) + index,
           ...customer,
           status: "pending"
