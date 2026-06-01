@@ -1943,7 +1943,7 @@ textarea {
 
 table {
   border-collapse: collapse;
-  font-size: 0.94rem;
+  font-size: 0.9rem;
   min-width: 920px;
   width: 100%;
 }
@@ -1951,7 +1951,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--line);
-  padding: 7px 12px;
+  padding: 5px 10px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -1960,7 +1960,7 @@ td {
 th {
   color: var(--muted);
   font-size: 0.78rem;
-  padding: 10px 12px;
+  padding: 8px 10px;
   text-transform: uppercase;
 }
 
@@ -1969,9 +1969,9 @@ th {
   border-radius: 999px;
   color: var(--brand-strong);
   display: inline-flex;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 800;
-  padding: 4px 9px;
+  padding: 3px 8px;
 }
 
 .status.pending,
