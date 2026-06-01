@@ -1081,7 +1081,12 @@ h2 {
 .row-actions {
   align-items: center;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 5px;
+}
+
+.row-actions .small,
+td .small {
+  white-space: nowrap;
 }
 
 .row-note {
@@ -1150,9 +1155,9 @@ h2 {
 }
 
 .small {
-  font-size: 0.88rem;
-  min-height: 30px;
-  padding: 0 10px;
+  font-size: 0.78rem;
+  min-height: 28px;
+  padding: 0 9px;
 }
 
 .metrics-grid {
@@ -1984,7 +1989,7 @@ textarea {
 
 table {
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   min-width: 920px;
   width: 100%;
 }
@@ -1992,7 +1997,7 @@ table {
 th,
 td {
   border-bottom: 1px solid var(--line);
-  padding: 5px 10px;
+  padding: 4px 8px;
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
@@ -2000,8 +2005,8 @@ td {
 
 th {
   color: var(--muted);
-  font-size: 0.78rem;
-  padding: 8px 10px;
+  font-size: 0.72rem;
+  padding: 7px 8px;
   text-transform: uppercase;
 }
 
@@ -2010,9 +2015,9 @@ th {
   border-radius: 999px;
   color: var(--brand-strong);
   display: inline-flex;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 3px 8px;
+  padding: 3px 7px;
 }
 
 .status.pending,
@@ -2227,6 +2232,65 @@ th {
   color: var(--muted);
   line-height: 1.55;
   margin-bottom: 0;
+}
+
+.manual-mode-panel {
+  background:
+    radial-gradient(circle at top left, rgba(18, 107, 104, 0.1), transparent 18rem),
+    white;
+  border: 1px solid #b7dcd6;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 18px;
+  margin-bottom: 22px;
+  padding: 22px;
+}
+
+.manual-mode-panel h2 {
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  margin-bottom: 8px;
+}
+
+.manual-mode-panel p {
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+.manual-mode-panel ol {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.manual-mode-panel li {
+  background: var(--soft);
+  border: 1px solid #b7dcd6;
+  border-radius: 14px;
+  color: var(--muted);
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: 32px 1fr;
+  padding: 12px;
+}
+
+.manual-mode-panel li strong {
+  align-items: center;
+  background: var(--brand);
+  border-radius: 10px;
+  color: white;
+  display: inline-flex;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.manual-mode-panel li span {
+  display: block;
 }
 
 .manual-send-card {

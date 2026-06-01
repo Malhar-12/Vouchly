@@ -1707,8 +1707,8 @@ function renderBusinessControlCenter() {
       </article>
       <article>
         <span>Sending mode</span>
-        <strong>${escapeHtml(isAnyProviderConnected() ? "API connected" : "Owner sends")}</strong>
-        <small>${escapeHtml(isAnyProviderConnected() ? "Automatic delivery can run through provider." : "Vouchly prepares messages; owner taps Send in WhatsApp.")}</small>
+        <strong>${escapeHtml(isAnyProviderConnected() ? "Auto sending connected" : "Owner taps Send")}</strong>
+        <small>${escapeHtml(isAnyProviderConnected() ? "Delivery runs through the connected sender." : "Vouchly prepares messages; owner taps Send in WhatsApp.")}</small>
         <button class="ghost-button small" data-view="sending" type="button">View setup</button>
       </article>
     </section>
@@ -1875,13 +1875,13 @@ function renderCustomers() {
       </div>
       <div class="campaign-toolbar">
         <div>
-          <strong>Bulk message prepare</strong>
-          <span>Choose a purpose and prepare messages for pending customers in this filtered view. Names and links auto-fill.</span>
+          <strong>Prepare messages for this list</strong>
+          <span>Choose review, reminder, offer, launch, or festival update. Vouchly fills every customer name and review link automatically.</span>
         </div>
         <select data-bulk-purpose>
           ${messageTypeOptionsHtml(bulkCampaignPurpose)}
         </select>
-        <button class="primary-button small" data-action="bulk-send" type="button">Prepare filtered</button>
+        <button class="primary-button small" data-action="bulk-send" type="button">Prepare list</button>
       </div>
       ${customerRows(visibleCustomers, startIndex)}
       ${customerPagination(currentPage, totalPages, filteredCustomers.length)}
@@ -2222,17 +2222,33 @@ function renderSending() {
   return `
     <section class="setup-hero sending-hero">
       <p class="eyebrow">WhatsApp sending</p>
-      <h2>Send from the owner's own WhatsApp number</h2>
+      <h2>Ready-to-send WhatsApp messages, using the owner's number</h2>
       <p>
-        No customer name typing. Vouchly reads the saved customer name and phone, fills the message,
-        adds the Google review link, and opens WhatsApp. The owner only checks it and taps Send.
+        Vouchly creates the message from saved customer data, adds the review link or offer,
+        and opens WhatsApp with everything filled. The owner only checks it and taps Send.
       </p>
+    </section>
+    <section class="manual-mode-panel">
+      <div>
+        <p class="eyebrow">Current mode</p>
+        <h2>Works today without technical setup</h2>
+        <p>
+          This is the safest launch flow for small businesses: add customers, click Send on WhatsApp,
+          and send from the owner's real WhatsApp number. Full automatic sending can be connected later
+          with a WhatsApp provider when the business is ready.
+        </p>
+      </div>
+      <ol>
+        <li><strong>1</strong><span>Add customers with phone numbers.</span></li>
+        <li><strong>2</strong><span>Vouchly fills name, business, link, and campaign text.</span></li>
+        <li><strong>3</strong><span>WhatsApp opens; owner taps Send.</span></li>
+      </ol>
     </section>
     <section class="owner-whatsapp-panel">
       <div>
         <p class="eyebrow">Owner number</p>
         <h2>${ownerNumber ? `+${ownerNumber}` : "Add the owner's WhatsApp number"}</h2>
-        <p>Shop owners do not need to learn API words. They add their business WhatsApp once, then Vouchly opens each customer message with name, offer, and review link filled.</p>
+        <p>Shop owners do not need technical knowledge. They add their WhatsApp number once, then Vouchly opens each customer message with the right details filled.</p>
       </div>
       <button class="primary-button" data-view="settings" type="button">${ownerNumber ? "Edit number" : "Add in settings"}</button>
     </section>
@@ -2245,7 +2261,7 @@ function renderSending() {
     <section class="manual-send-grid">
       ${manualSendCard("1", "Names auto-fill", "Add the customer once. {{name}} becomes Priya, Rahul, or that exact customer automatically.")}
       ${manualSendCard("2", "Send on WhatsApp", "Click Send on WhatsApp on a customer row. Vouchly opens WhatsApp with the message ready.")}
-      ${manualSendCard("3", "Follow-up campaigns", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
+      ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
       ${manualSendCard("4", "Prepare safely", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safer.")}
     </section>
     <section class="panel">
@@ -3509,7 +3525,7 @@ function bulkQueueRequests(purpose = bulkCampaignPurpose) {
 
     appMessage = isAnyProviderConnected()
       ? `${customersToSchedule.length} ${option.label.toLowerCase()} message${customersToSchedule.length === 1 ? "" : "s"} prepared for connected delivery.`
-      : `${customersToSchedule.length} ${option.label.toLowerCase()} message${customersToSchedule.length === 1 ? "" : "s"} prepared for ${option.dueTime}. This does not auto-send; open WhatsApp and tap Send for each customer.`;
+      : `${customersToSchedule.length} ${option.label.toLowerCase()} message${customersToSchedule.length === 1 ? "" : "s"} prepared for ${option.dueTime}. It will wait in Follow-ups until the owner opens WhatsApp and taps Send.`;
 
     return {
       ...current,
@@ -3565,13 +3581,12 @@ function setPreferredProvider(providerId) {
 
 function showProviderNextStep(providerId) {
   const guide = {
-    whatsapp: "Current mode: Vouchly opens the owner's WhatsApp with the message ready. The owner checks it and taps Send from their own number. Automatic background sending can be added later.",
-    sms: "SMS is optional later. Most local customers respond better on WhatsApp first.",
-    email: "Email is optional later for receipts, reports, and backup delivery."
+    whatsapp: "WhatsApp setup: add the owner's number in Settings. Then use Send on WhatsApp from Customers or Follow-ups. Vouchly fills the customer name, message, and link.",
+    sms: "SMS setup later: keep this optional. For most local businesses, WhatsApp should be the main channel first.",
+    email: "Email setup later: useful for reports, receipts, and backup delivery, but not the first selling point."
   };
 
   appMessage = guide[providerId] ?? "Choose a sending provider first.";
-  window.alert(appMessage);
   render();
 }
 
