@@ -135,7 +135,12 @@ const defaultState = {
     city: "Bangalore",
     googleReviewLink: "",
     senderName: "Bright Local Services",
+    ownerWhatsApp: "",
     plan: "free",
+    billingStatus: "trial",
+    paymentProvider: "razorpay_pending",
+    pendingPlan: "",
+    lastBillingActionAt: "",
     trialStartedAt: "",
     acceptedTermsAt: "",
     setupComplete: false
@@ -1521,12 +1526,52 @@ function renderPlanBanner() {
   const plan = getCurrentPlan();
   const usage = getPlanUsage(plan);
   const alert = getPlanAccessMessage();
+  const targetPlanId = plan.id === "free" ? "starter" : plan.id;
+  const actionLabel = plan.id === "free" ? "Upgrade plan" : "Manage billing";
+  const action = `<button class="primary-button small" data-action="open-billing" data-plan-id="${escapeHtml(targetPlanId)}" type="button">${escapeHtml(actionLabel)}</button>`;
 
   if (alert) {
     return `
       <div class="plan-banner warning">
-        <strong>Upgrade needed</strong>
-        <span>${escapeHtml(alert)}</span>
+        <div>
+          <strong>Upgrade needed</strong>
+          <span>${escapeHtml(alert)}</span>
+        </div>
+        ${action}
+      </div>
+    `;
+  }
+
+  if (plan.id === "free") {
+    return `
+      <div class="plan-banner">
+        <div>
+          <strong>Free trial</strong>
+          <span>${usage.trialDaysLeft} day${usage.trialDaysLeft === 1 ? "" : "s"} left - ${usage.customers}/${usage.customerLimit} customers - ${usage.requests}/${usage.requestLimit} prepared requests</span>
+        </div>
+        ${action}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="plan-banner">
+      <div>
+        <strong>${escapeHtml(plan.name)} plan</strong>
+        <span>${usage.customers}/${usage.customerLimit} customers - ${usage.requests}/${usage.requestLimit} prepared requests this workspace</span>
+      </div>
+      ${action}
+    </div>
+  `;
+
+  if (alert) {
+    return `
+      <div class="plan-banner warning">
+        <div>
+          <strong>Upgrade needed</strong>
+          <span>${escapeHtml(alert)}</span>
+        </div>
+        ${action}
       </div>
     `;
   }
@@ -1602,6 +1647,7 @@ function renderDashboard() {
   return `
     ${renderSendingModeBanner()}
     ${renderPlanUsageStrip()}
+    ${renderBusinessControlCenter()}
     ${renderDashboardQuickActions(pending, scheduled)}
     <section class="metrics-grid">
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
@@ -1630,6 +1676,41 @@ function renderDashboard() {
         </div>
         ${taskRows(state.tasks.slice(0, 5))}
       </div>
+    </section>
+  `;
+}
+
+function renderBusinessControlCenter() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+  const ownerNumber = normalizePhoneForWhatsApp(state.business.ownerWhatsApp);
+  const pendingPlan = plans.find((item) => item.id === state.business.pendingPlan);
+  const billingDetail = pendingPlan
+    ? `${pendingPlan.name} payment setup pending`
+    : plan.id === "free"
+      ? `${usage.trialDaysLeft} trial day${usage.trialDaysLeft === 1 ? "" : "s"} left`
+      : `${plan.name} workspace active`;
+
+  return `
+    <section class="control-center">
+      <article>
+        <span>Billing</span>
+        <strong>${escapeHtml(plan.name)}</strong>
+        <small>${escapeHtml(billingDetail)}</small>
+        <button class="ghost-button small" data-action="open-billing" data-plan-id="${escapeHtml(plan.id === "free" ? "starter" : plan.id)}" type="button">Open billing</button>
+      </article>
+      <article>
+        <span>Owner WhatsApp</span>
+        <strong>${ownerNumber ? `+${ownerNumber}` : "Not added"}</strong>
+        <small>Used only to guide the owner-send workflow. Messages still open on the owner's device.</small>
+        <button class="ghost-button small" data-view="settings" type="button">Add number</button>
+      </article>
+      <article>
+        <span>Sending mode</span>
+        <strong>${escapeHtml(isAnyProviderConnected() ? "API connected" : "Owner sends")}</strong>
+        <small>${escapeHtml(isAnyProviderConnected() ? "Automatic delivery can run through provider." : "Vouchly prepares messages; owner taps Send in WhatsApp.")}</small>
+        <button class="ghost-button small" data-view="sending" type="button">View setup</button>
+      </article>
     </section>
   `;
 }
@@ -2136,6 +2217,8 @@ function outboxStat(label, value, detail) {
 }
 
 function renderSending() {
+  const ownerNumber = normalizePhoneForWhatsApp(state.business.ownerWhatsApp);
+
   return `
     <section class="setup-hero sending-hero">
       <p class="eyebrow">WhatsApp sending</p>
@@ -2145,11 +2228,19 @@ function renderSending() {
         adds the Google review link, and opens WhatsApp. The owner only checks it and taps Send.
       </p>
     </section>
+    <section class="owner-whatsapp-panel">
+      <div>
+        <p class="eyebrow">Owner number</p>
+        <h2>${ownerNumber ? `+${ownerNumber}` : "Add the owner's WhatsApp number"}</h2>
+        <p>Shop owners do not need to learn API words. They add their business WhatsApp once, then Vouchly opens each customer message with name, offer, and review link filled.</p>
+      </div>
+      <button class="primary-button" data-view="settings" type="button">${ownerNumber ? "Edit number" : "Add in settings"}</button>
+    </section>
     <section class="sending-readiness">
       ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
       ${readinessItem("2", "Message templates", state.templates.every((template) => template.text?.includes("{{link}}")), "Keep review link placeholder in request and reminder templates.")}
       ${readinessItem("3", "Customer permission", Boolean(state.business.acceptedTermsAt), "Owner confirms they will only message real customers who agreed to be contacted.")}
-      ${readinessItem("4", "Owner WhatsApp", true, "Use Send on WhatsApp on each customer to send from the owner's own number.")}
+      ${readinessItem("4", "Owner WhatsApp", Boolean(ownerNumber), "Use Send on WhatsApp on each customer to send from the owner's own number.")}
     </section>
     <section class="manual-send-grid">
       ${manualSendCard("1", "Names auto-fill", "Add the customer once. {{name}} becomes Priya, Rahul, or that exact customer automatically.")}
@@ -2468,6 +2559,11 @@ function renderSettings(isOnboarding = false) {
         <label class="wide">
           Sender name
           <input name="senderName" value="${escapeHtml(state.business.senderName)}" />
+        </label>
+        <label class="wide">
+          Owner WhatsApp number
+          <input name="ownerWhatsApp" value="${escapeHtml(state.business.ownerWhatsApp ?? "")}" placeholder="+91 98765 43210" />
+          <small>This is the business or personal WhatsApp number the owner will use to send prepared messages.</small>
         </label>
         ${renderTemplateEditorFields()}
         <div class="template-help wide">
@@ -2951,6 +3047,7 @@ function bindEvents() {
       if (action === "resend-confirmation") resendConfirmationEmail();
       if (action === "set-preferred-provider") setPreferredProvider(button.dataset.provider);
       if (action === "show-provider-next-step") showProviderNextStep(button.dataset.provider);
+      if (action === "open-billing") openBillingCheckout(button.dataset.planId || "growth");
       if (action === "customer-prev-page") moveCustomerPage(-1);
       if (action === "customer-next-page") moveCustomerPage(1);
       if (action === "clear-customer-filters") clearCustomerFilters();
@@ -3033,6 +3130,29 @@ function clearCustomerFilters() {
 function clearOutboxFilters() {
   outboxFilters = defaultOutboxFilters();
   render();
+}
+
+function openBillingCheckout(planId = "growth") {
+  const plan = plans.find((item) => item.id === planId) ?? plans.find((item) => item.id === "growth") ?? plans[0];
+
+  if (plan.id === "free") {
+    appMessage = "Free trial is active. Paid billing will be connected with Razorpay before collecting real payments.";
+    render();
+    return;
+  }
+
+  appMessage = `${plan.name} selected. Razorpay checkout is the next connection step; no paid plan is activated until payment is live.`;
+
+  setState((current) => ({
+    ...current,
+    business: {
+      ...current.business,
+      billingStatus: "payment_pending",
+      paymentProvider: "razorpay_pending",
+      pendingPlan: plan.id,
+      lastBillingActionAt: new Date().toISOString()
+    }
+  }));
 }
 
 function loadDemoWorkspace() {

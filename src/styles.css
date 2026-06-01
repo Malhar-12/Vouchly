@@ -1282,6 +1282,43 @@ h2 {
   margin: 6px 0 12px;
 }
 
+.control-center {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.control-center article {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 250, 0.88)),
+    white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 9px;
+  padding: 18px;
+}
+
+.control-center span {
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.control-center strong {
+  color: var(--ink);
+  font-size: 1.2rem;
+}
+
+.control-center small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .meter-progress {
   appearance: none;
   background: #e6edf0;
@@ -1367,12 +1404,14 @@ h2 {
 }
 
 .plan-banner {
+  align-items: center;
   background: #e8f4f1;
   border: 1px solid #b7dcd6;
   border-radius: 8px;
   color: var(--brand-strong);
   display: grid;
-  gap: 4px;
+  gap: 10px 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
   margin-bottom: 22px;
   padding: 13px 15px;
 }
@@ -1389,6 +1428,8 @@ h2 {
 
 .plan-banner span {
   color: var(--muted);
+  display: block;
+  margin-top: 4px;
 }
 
 .modal-backdrop {
@@ -2162,6 +2203,32 @@ th {
   margin-bottom: 22px;
 }
 
+.owner-whatsapp-panel {
+  align-items: center;
+  background:
+    radial-gradient(circle at top right, rgba(42, 168, 137, 0.14), transparent 16rem),
+    white;
+  border: 1px solid #b7dcd6;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  padding: 20px;
+}
+
+.owner-whatsapp-panel h2 {
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.owner-whatsapp-panel p:last-child {
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
 .manual-send-card {
   align-items: flex-start;
   background: white;
@@ -2489,6 +2556,7 @@ th {
   .metrics-grid,
   .quick-actions,
   .usage-strip,
+  .control-center,
   .sending-readiness,
   .split-grid,
   .template-grid,
@@ -2568,7 +2636,8 @@ th {
   }
 
   .topbar,
-  .panel-head {
+  .panel-head,
+  .owner-whatsapp-panel {
     align-items: stretch;
     flex-direction: column;
   }
