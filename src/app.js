@@ -135,6 +135,7 @@ const defaultState = {
     city: "Bangalore",
     googleReviewLink: "",
     senderName: "Bright Local Services",
+    offerText: "your latest offer, sale, or new product update",
     ownerWhatsApp: "",
     plan: "free",
     billingStatus: "trial",
@@ -967,7 +968,7 @@ function buildMessage(customer, purpose = "review") {
     .replaceAll("{{name}}", customer.name)
     .replaceAll("{{business}}", state.business.name)
     .replaceAll("{{link}}", state.business.googleReviewLink || "[Google review link]")
-    .replaceAll("{{offer}}", "your latest offer or update");
+    .replaceAll("{{offer}}", state.business.offerText || "your latest offer or update");
 }
 
 function formatDueAt(dueAt = "") {
@@ -2371,6 +2372,22 @@ function renderSending() {
       ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
       ${manualSendCard("4", "Prepare safely", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safer.")}
     </section>
+    <section class="campaign-use-panel">
+      <div>
+        <p class="eyebrow">Campaigns</p>
+        <h2>Use Vouchly for more than review requests</h2>
+        <p>
+          Owners can prepare customer-wise WhatsApp messages for offers, new stock, festival deals,
+          service reminders, and review follow-ups. Vouchly fills the customer name automatically.
+        </p>
+      </div>
+      <div class="campaign-use-grid">
+        ${campaignUseCard("Review", "Ask happy customers for a Google review after a purchase or visit.")}
+        ${campaignUseCard("Offer", "Send a saved offer like discount, new stock, or limited-time deal.")}
+        ${campaignUseCard("Launch", "Announce a new product, treatment, service, menu item, or package.")}
+        ${campaignUseCard("Reminder", "Follow up with customers who did not reply or review yet.")}
+      </div>
+    </section>
     <section class="panel backend-wall-panel">
       <div class="panel-head">
         <div>
@@ -2415,6 +2432,15 @@ function manualSendCard(number, title, body) {
         <h3>${escapeHtml(title)}</h3>
         <p>${escapeHtml(body)}</p>
       </div>
+    </article>
+  `;
+}
+
+function campaignUseCard(title, body) {
+  return `
+    <article class="campaign-use-card">
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(body)}</span>
     </article>
   `;
 }
@@ -2706,6 +2732,11 @@ function renderSettings(isOnboarding = false) {
           Owner WhatsApp number
           <input name="ownerWhatsApp" value="${escapeHtml(state.business.ownerWhatsApp ?? "")}" placeholder="+91 98765 43210" />
           <small>This is the business or personal WhatsApp number the owner will use to send prepared messages.</small>
+        </label>
+        <label class="wide">
+          Campaign / offer text
+          <input name="offerText" value="${escapeHtml(state.business.offerText ?? "")}" placeholder="Example: 10% off this week, new stock arrived, free consultation..." />
+          <small>Used automatically in offer, new launch, and festival follow-up messages through <code>{{offer}}</code>.</small>
         </label>
         ${renderTemplateEditorFields()}
         <div class="template-help wide">
