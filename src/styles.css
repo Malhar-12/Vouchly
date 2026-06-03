@@ -1324,6 +1324,95 @@ td .small {
   line-height: 1.45;
 }
 
+.security-hero {
+  background:
+    radial-gradient(circle at top right, rgba(18, 107, 104, 0.16), transparent 24rem),
+    linear-gradient(135deg, #e8f4f1, #fffdf8);
+}
+
+.admin-security-grid,
+.security-check-grid,
+.backend-wall-grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.admin-security-grid,
+.security-check-grid,
+.backend-wall-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-control-card,
+.security-check,
+.backend-wall-step {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 250, 0.9)),
+    white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+}
+
+.admin-control-card span,
+.backend-wall-step span {
+  color: var(--brand);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-control-card strong,
+.security-check h3,
+.backend-wall-step h3 {
+  color: var(--ink);
+  font-size: 1.12rem;
+}
+
+.admin-control-card small,
+.security-check p,
+.backend-wall-step p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.security-check strong {
+  align-self: start;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 900;
+  justify-self: start;
+  padding: 6px 10px;
+}
+
+.security-check.ready strong {
+  background: #e5f3e7;
+  color: #24723b;
+}
+
+.security-check.needs strong {
+  background: #fff2df;
+  color: #9a530d;
+}
+
+.backend-wall-panel {
+  background:
+    linear-gradient(135deg, rgba(18, 107, 104, 0.07), rgba(216, 132, 49, 0.06)),
+    white;
+}
+
+.security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .meter-progress {
   appearance: none;
   background: #e6edf0;
@@ -2621,6 +2710,9 @@ th {
   .quick-actions,
   .usage-strip,
   .control-center,
+  .admin-security-grid,
+  .security-check-grid,
+  .backend-wall-grid,
   .sending-readiness,
   .split-grid,
   .template-grid,

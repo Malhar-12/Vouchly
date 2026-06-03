@@ -1141,6 +1141,7 @@ function render() {
         ${setupComplete ? navButton("sending", "Sending") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
+        ${setupComplete ? navButton("admin", "Admin") : ""}
         ${setupComplete ? navButton("legal", "Terms & Privacy") : ""}
         <div class="business-card">
           <small>Business</small>
@@ -1621,6 +1622,7 @@ function renderView() {
   if (state.activeView === "sending") return renderSending();
   if (state.activeView === "templates") return renderTemplates();
   if (state.activeView === "settings") return renderSettings();
+  if (state.activeView === "admin") return renderAdminSecurity();
   if (state.activeView === "legal") return renderLegal();
   return renderDashboard();
 }
@@ -1712,6 +1714,111 @@ function renderBusinessControlCenter() {
         <button class="ghost-button small" data-view="sending" type="button">View setup</button>
       </article>
     </section>
+  `;
+}
+
+function renderAdminSecurity() {
+  const plan = getCurrentPlan();
+  const usage = getPlanUsage(plan);
+  const ownerNumber = normalizePhoneForWhatsApp(state.business.ownerWhatsApp);
+  const termsAccepted = Boolean(state.business.acceptedTermsAt);
+  const providersConnected = getConnectedProviders();
+
+  return `
+    <section class="setup-hero security-hero">
+      <p class="eyebrow">Admin & Security</p>
+      <h2>Private workspace, safer sending, backend-only secrets</h2>
+      <p>
+        This page shows what is protected today and what must stay behind a backend when we add Razorpay,
+        WhatsApp API, SMS, or email automation.
+      </p>
+    </section>
+
+    <section class="admin-security-grid">
+      ${adminControlCard("Current plan", plan.name, `${usage.customers}/${usage.customerLimit} customers and ${usage.requests}/${usage.requestLimit} prepared requests used.`, "Open billing", "open-billing", plan.id === "free" ? "starter" : plan.id)}
+      ${adminControlCard("Owner WhatsApp", ownerNumber ? `+${ownerNumber}` : "Not added", "Used only for the owner-send workflow. Vouchly does not expose this publicly.", "Edit number", "", "", "settings")}
+      ${adminControlCard("Sending mode", providersConnected.length ? "Provider connected" : "Owner taps Send", providersConnected.length ? "Automatic delivery can run through the connected provider." : "Messages are prepared and opened in WhatsApp. Owner sends from their own number.", "View sending", "", "", "sending")}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Security wall</p>
+          <h2>What is protected right now</h2>
+        </div>
+      </div>
+      <div class="security-check-grid">
+        ${securityCheckItem("Private login", "Enabled", "Only signed-in owners can open their workspace.")}
+        ${securityCheckItem("Supabase RLS", "Configured", "The schema enables and forces Row Level Security for each owner's workspace row.")}
+        ${securityCheckItem("No secret keys in browser", "Protected", "The frontend only uses the public Supabase anon key. Provider, billing, and service-role secrets must never be added here.")}
+        ${securityCheckItem("Customer consent", termsAccepted ? "Accepted" : "Needs acceptance", termsAccepted ? "Owner accepted Terms, Privacy, anti-spam, and honest-review rules." : "Ask owner to accept Terms in Settings before serious usage.", termsAccepted)}
+        ${securityCheckItem("Data backup", "Available", "Owners can download their data backup as CSV from Settings.")}
+        ${securityCheckItem("Manual WhatsApp safety", "Active", "Until a provider is connected, Vouchly prepares messages and the owner sends them manually.")}
+      </div>
+    </section>
+
+    <section class="panel backend-wall-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Backend-only rules</p>
+          <h2>What must not be stored in app.js</h2>
+        </div>
+      </div>
+      <div class="backend-wall-grid">
+        ${backendWallStep("Razorpay", "Payment links, order creation, webhook verification, and plan activation must run from a backend or Supabase Edge Function.")}
+        ${backendWallStep("WhatsApp API", "Interakt, WATI, AiSensy, or Meta API tokens must be stored server-side only, never in browser code.")}
+        ${backendWallStep("Admin logs", "Future audit logs should record plan changes, exports, deletions, and provider actions without exposing private tokens.")}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Owner controls</p>
+          <h2>Fast actions</h2>
+        </div>
+      </div>
+      <div class="security-actions">
+        <button class="ghost-button" data-action="export" type="button">Download data backup</button>
+        <button class="ghost-button" data-view="settings" type="button">Privacy settings</button>
+        <button class="ghost-button" data-view="sending" type="button">Sending setup</button>
+        <button class="danger-button" data-action="reset-workspace" type="button">Reset workspace</button>
+      </div>
+    </section>
+  `;
+}
+
+function adminControlCard(label, value, detail, buttonLabel, action = "", planId = "", view = "") {
+  const attribute = view ? `data-view="${view}"` : `data-action="${action}"`;
+  const planAttribute = planId ? `data-plan-id="${escapeHtml(planId)}"` : "";
+
+  return `
+    <article class="admin-control-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(detail)}</small>
+      <button class="ghost-button small" ${attribute} ${planAttribute} type="button">${escapeHtml(buttonLabel)}</button>
+    </article>
+  `;
+}
+
+function securityCheckItem(title, status, detail, ready = true) {
+  return `
+    <article class="security-check ${ready ? "ready" : "needs"}">
+      <strong>${escapeHtml(status)}</strong>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(detail)}</p>
+    </article>
+  `;
+}
+
+function backendWallStep(title, detail) {
+  return `
+    <article class="backend-wall-step">
+      <span>Backend only</span>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(detail)}</p>
+    </article>
   `;
 }
 
@@ -2254,7 +2361,7 @@ function renderSending() {
     </section>
     <section class="sending-readiness">
       ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
-      ${readinessItem("2", "Message templates", state.templates.every((template) => template.text?.includes("{{link}}")), "Keep review link placeholder in request and reminder templates.")}
+      ${readinessItem("2", "Message templates", reviewTemplatesHaveLinks(), "Keep review link placeholder in request and reminder templates. Offer and launch templates can use offer text instead.")}
       ${readinessItem("3", "Customer permission", Boolean(state.business.acceptedTermsAt), "Owner confirms they will only message real customers who agreed to be contacted.")}
       ${readinessItem("4", "Owner WhatsApp", Boolean(ownerNumber), "Use Send on WhatsApp on each customer to send from the owner's own number.")}
     </section>
@@ -2263,6 +2370,19 @@ function renderSending() {
       ${manualSendCard("2", "Send on WhatsApp", "Click Send on WhatsApp on a customer row. Vouchly opens WhatsApp with the message ready.")}
       ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
       ${manualSendCard("4", "Prepare safely", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safer.")}
+    </section>
+    <section class="panel backend-wall-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Automatic sending later</p>
+          <h2>Real automation will run through a secure backend</h2>
+        </div>
+      </div>
+      <div class="backend-wall-grid">
+        ${backendWallStep("Today", "Owner clicks Send on WhatsApp. The customer's name and message are auto-filled from Vouchly data.")}
+        ${backendWallStep("Provider phase", "When Interakt, WATI, AiSensy, or Meta is connected, Vouchly can trigger approved templates automatically.")}
+        ${backendWallStep("Security rule", "Provider API tokens stay in backend or Edge Functions only, never inside the static website.")}
+      </div>
     </section>
     <section class="panel">
       <div class="panel-head">
@@ -2279,6 +2399,12 @@ function renderSending() {
       </div>
     </section>
   `;
+}
+
+function reviewTemplatesHaveLinks() {
+  return state.templates
+    .filter((template) => ["review", "review_reminder"].includes(template.purpose))
+    .every((template) => template.text?.includes("{{link}}"));
 }
 
 function manualSendCard(number, title, body) {
@@ -3581,7 +3707,7 @@ function setPreferredProvider(providerId) {
 
 function showProviderNextStep(providerId) {
   const guide = {
-    whatsapp: "WhatsApp setup: add the owner's number in Settings. Then use Send on WhatsApp from Customers or Follow-ups. Vouchly fills the customer name, message, and link.",
+    whatsapp: "WhatsApp setup today: add the owner's number in Settings, then use Send on WhatsApp from Customers or Follow-ups. Vouchly fills the customer name, message, and link. Full automatic sending later needs Interakt/WATI/AiSensy/Meta through a backend-only token.",
     sms: "SMS setup later: keep this optional. For most local businesses, WhatsApp should be the main channel first.",
     email: "Email setup later: useful for reports, receipts, and backup delivery, but not the first selling point."
   };

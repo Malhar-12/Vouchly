@@ -4,6 +4,15 @@ create table if not exists vouchly_workspaces (
   updated_at timestamptz not null default now()
 );
 
+comment on table vouchly_workspaces is
+  'One private Vouchly workspace per authenticated owner. Protected by forced Row Level Security.';
+
+comment on column vouchly_workspaces.state is
+  'Frontend-visible workspace JSON. Do not store service_role keys, Razorpay secrets, WhatsApp provider tokens, SMS keys, email keys, or admin passwords here.';
+
+create index if not exists vouchly_workspaces_updated_at_idx
+on vouchly_workspaces (updated_at desc);
+
 alter table vouchly_workspaces enable row level security;
 alter table vouchly_workspaces force row level security;
 
