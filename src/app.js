@@ -567,6 +567,14 @@ function messageTypeOptionsHtml(selectedPurpose = "review") {
     .join("");
 }
 
+function getRowSelectedPurpose(customerId, fallback = "review") {
+  if (!customerId) {
+    return fallback;
+  }
+
+  return document.querySelector(`[data-row-purpose="${customerId}"]`)?.value || fallback;
+}
+
 function formatCustomerStatus(status = "") {
   if (status === "scheduled") return "prepared";
   if (status === "reviewed") return "reviewed";
@@ -1139,7 +1147,7 @@ function render() {
         ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
         ${setupComplete ? navButton("customers", "Customers") : ""}
         ${setupComplete ? navButton("automations", "Outbox") : ""}
-        ${setupComplete ? navButton("sending", "Sending") : ""}
+        ${setupComplete ? navButton("sending", "Guidelines") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
         ${setupComplete ? navButton("admin", "Admin") : ""}
@@ -1709,10 +1717,10 @@ function renderBusinessControlCenter() {
         <button class="ghost-button small" data-view="settings" type="button">Add number</button>
       </article>
       <article>
-        <span>Sending mode</span>
-        <strong>${escapeHtml(isAnyProviderConnected() ? "Auto sending connected" : "Owner taps Send")}</strong>
+        <span>Guidelines</span>
+        <strong>${escapeHtml(isAnyProviderConnected() ? "Auto sender connected" : "Owner sends in WhatsApp")}</strong>
         <small>${escapeHtml(isAnyProviderConnected() ? "Delivery runs through the connected sender." : "Vouchly prepares messages; owner taps Send in WhatsApp.")}</small>
-        <button class="ghost-button small" data-view="sending" type="button">View setup</button>
+        <button class="ghost-button small" data-view="sending" type="button">View guidelines</button>
       </article>
     </section>
   `;
@@ -1983,13 +1991,13 @@ function renderCustomers() {
       </div>
       <div class="campaign-toolbar">
         <div>
-          <strong>Prepare messages for this list</strong>
-          <span>Choose review, reminder, offer, launch, or festival update. Vouchly fills every customer name and review link automatically.</span>
+          <strong>Choose message type for this list</strong>
+          <span>Pick Review request, Reminder, Offer, New launch, or Festival sale. Vouchly fills every customer name and saved link automatically.</span>
         </div>
         <select data-bulk-purpose>
           ${messageTypeOptionsHtml(bulkCampaignPurpose)}
         </select>
-        <button class="primary-button small" data-action="bulk-send" type="button">Prepare list</button>
+        <button class="primary-button small" data-action="bulk-send" type="button">Prepare selected type</button>
       </div>
       ${customerRows(visibleCustomers, startIndex)}
       ${customerPagination(currentPage, totalPages, filteredCustomers.length)}
@@ -2090,8 +2098,11 @@ function customerRows(customers, startIndex = 0) {
                   <td>${escapeHtml(customer.visitDate)}</td>
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(formatCustomerStatus(customer.status))}</span></td>
                   <td class="row-actions">
-                    <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}" data-purpose="review">Preview</button>
-                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}" data-purpose="review">Send on WhatsApp</button>
+                    <select class="row-purpose-select" data-row-purpose="${customer.id}" aria-label="Message type for ${escapeHtml(customer.name)}">
+                      ${messageTypeOptionsHtml("review")}
+                    </select>
+                    <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview</button>
+                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}">Open WhatsApp</button>
                     <button class="ghost-button small" data-action="edit-customer" data-id="${customer.id}">Edit</button>
                     ${
                       customer.status === "reviewed"
@@ -2329,7 +2340,7 @@ function renderSending() {
 
   return `
     <section class="setup-hero sending-hero">
-      <p class="eyebrow">WhatsApp sending</p>
+      <p class="eyebrow">Guidelines</p>
       <h2>Ready-to-send WhatsApp messages, using the owner's number</h2>
       <p>
         Vouchly creates the message from saved customer data, adds the review link or offer,
@@ -2409,8 +2420,8 @@ function renderSending() {
         </div>
       </div>
       <div class="workflow-list">
-        ${workflowStep("1", "Preview msg", "Shows the final message with the customer's name, your business name, and your Google review link filled in.")}
-        ${workflowStep("2", "Send on WhatsApp", "Opens WhatsApp Web/app with the customer number and message already filled. Owner taps Send from their own number.")}
+        ${workflowStep("1", "Choose message type", "Pick Review request, Reminder, Offer, New launch, or Festival sale from the customer row or bulk toolbar.")}
+        ${workflowStep("2", "Preview / Open WhatsApp", "Vouchly fills the customer name, business name, and saved link. Owner checks it, then opens WhatsApp.")}
         ${workflowStep("3", "Remind later", "Creates a prepared reminder for the right time. It appears in Follow-ups; owner opens WhatsApp and sends it manually.")}
         ${workflowStep("4", "Mark sent", "After the owner sends the message or finishes the follow-up, mark it sent for tracking.")}
       </div>
@@ -3201,7 +3212,7 @@ function bindEvents() {
     button.addEventListener("click", () => {
       const action = button.dataset.action;
       const id = Number(button.dataset.id);
-      const purpose = button.dataset.purpose;
+      const purpose = button.dataset.purpose || getRowSelectedPurpose(id);
 
       if (action === "export") exportData();
       if (action === "download-csv-template") downloadCsvTemplate();
@@ -3210,7 +3221,7 @@ function bindEvents() {
       if (action === "delete-customer") deleteCustomer(id);
       if (action === "complete-task") completeTask(id);
       if (action === "preview-message") previewMessage(id, purpose || "review");
-      if (action === "open-whatsapp-message") openWhatsAppMessage(id, purpose || messagePreviewPurpose);
+      if (action === "open-whatsapp-message") openWhatsAppMessage(id, purpose || messagePreviewPurpose || "review");
       if (action === "open-task-whatsapp") openTaskWhatsApp(id);
       if (action === "copy-preview-message") copyPreviewMessage(purpose || messagePreviewPurpose);
       if (action === "close-preview") closeMessagePreview();

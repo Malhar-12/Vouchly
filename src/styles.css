@@ -1092,6 +1092,14 @@ td .small {
   white-space: nowrap;
 }
 
+.row-purpose-select {
+  font-size: 0.78rem;
+  max-width: 145px;
+  min-height: 30px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
 .row-note {
   color: var(--brand-strong);
   font-size: 0.85rem;
