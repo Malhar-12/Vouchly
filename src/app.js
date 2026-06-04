@@ -72,7 +72,7 @@ const plans = [
   {
     id: "free",
     name: "Free Trial",
-    price: "INR 0 / first month",
+    price: "Free for 30 days",
     fit: "For testing Vouchly with real customers before paying.",
     limits: "Up to 100 customers in the first month",
     customerLimit: 100,
@@ -961,7 +961,6 @@ function requiredSetupFields(form) {
     ["Business type", form.type],
     ["Owner", form.owner],
     ["City", form.city],
-    ["Subscription plan", form.plan],
     ["Google review link", form.googleReviewLink],
     ["Sender name", form.senderName],
     ["First review request message", form.firstTemplate],
@@ -1150,8 +1149,6 @@ function render() {
         ${setupComplete ? navButton("sending", "Guidelines") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
-        ${setupComplete ? navButton("admin", "Admin") : ""}
-        ${setupComplete ? navButton("legal", "Terms & Privacy") : ""}
         <div class="business-card">
           <small>Business</small>
           <strong>${escapeHtml(state.business.name)}</strong>
@@ -1163,7 +1160,6 @@ function render() {
         ${renderHeader()}
         ${renderSyncBanner()}
         ${renderAppMessage()}
-        ${setupComplete ? renderPlanBanner() : ""}
         ${setupComplete ? renderView() : renderOnboarding()}
         ${renderMessagePreview()}
         ${renderCustomerEditor()}
@@ -1631,8 +1627,6 @@ function renderView() {
   if (state.activeView === "sending") return renderSending();
   if (state.activeView === "templates") return renderTemplates();
   if (state.activeView === "settings") return renderSettings();
-  if (state.activeView === "admin") return renderAdminSecurity();
-  if (state.activeView === "legal") return renderLegal();
   return renderDashboard();
 }
 
@@ -1925,10 +1919,9 @@ function renderCustomers() {
       <div class="panel-head">
         <div>
           <p class="eyebrow">Customers</p>
-          <h2>Add customer and schedule a review request</h2>
+          <h2>Add customer</h2>
         </div>
       </div>
-      ${renderCustomerPlanNotice()}
       <form class="inline-form" id="customer-form">
         <input name="name" placeholder="Customer name" required />
         <input name="phone" placeholder="Phone" />
@@ -1942,19 +1935,6 @@ function renderCustomers() {
         <input name="source" placeholder="Source" value="walk-in" />
         <button class="primary-button" type="submit">Add customer</button>
       </form>
-      <div class="import-card">
-        <div>
-          <strong>Import customers from CSV</strong>
-          <span>Use columns: name, phone, email, channel, visitDate, source. Imported customers start as pending.</span>
-        </div>
-        <div class="import-actions">
-          <label class="file-button">
-            Choose CSV
-            <input id="csv-import" type="file" accept=".csv,text/csv" />
-          </label>
-          <button class="ghost-button small" data-action="download-csv-template" type="button">Download template</button>
-        </div>
-      </div>
       <div class="list-toolbar">
         <input data-filter="query" value="${escapeHtml(customerFilters.query)}" placeholder="Search name, phone, email..." />
         <select data-filter="status">
@@ -1986,13 +1966,10 @@ function renderCustomers() {
         </span>
         <button class="ghost-button small" data-action="clear-customer-filters" type="button">Clear filters</button>
       </div>
-      <div class="list-note">
-        Serial numbers follow the selected date/search view, so today's list starts from 1 and yesterday's list has its own numbering.
-      </div>
       <div class="campaign-toolbar">
         <div>
-          <strong>Choose message type for this list</strong>
-          <span>Pick Review request, Reminder, Offer, New launch, or Festival sale. Vouchly fills every customer name and saved link automatically.</span>
+          <strong>Prepare messages for this list</strong>
+          <span>Vouchly fills customer names and your saved link automatically.</span>
         </div>
         <select data-bulk-purpose>
           ${messageTypeOptionsHtml(bulkCampaignPurpose)}
@@ -2677,8 +2654,6 @@ function renderTemplateEditorFields() {
 }
 
 function renderSettings(isOnboarding = false) {
-  const selectedPlan = plans.find((plan) => plan.id === state.business.plan) ?? plans[0];
-
   return `
     <section class="panel">
       <div class="panel-head">
@@ -2688,6 +2663,7 @@ function renderSettings(isOnboarding = false) {
         </div>
       </div>
       <form class="settings-form" id="settings-form">
+        <input type="hidden" name="plan" value="${escapeHtml(state.business.plan || "free")}" />
         <label>
           Business name
           <input name="name" value="${escapeHtml(state.business.name)}" />
@@ -2711,26 +2687,6 @@ function renderSettings(isOnboarding = false) {
           City
           <input name="city" value="${escapeHtml(state.business.city)}" />
         </label>
-        <div class="wide">
-          <p class="field-title">Subscription plan</p>
-          <div class="plan-grid" role="radiogroup" aria-label="Subscription plan">
-            ${plans
-              .map(
-                (plan) => `
-                  <label class="plan-card ${selectedPlan.id === plan.id ? "selected" : ""}">
-                    <input name="plan" type="radio" value="${escapeHtml(plan.id)}" ${selectedPlan.id === plan.id ? "checked" : ""} />
-                    <span>${escapeHtml(plan.name)}</span>
-                    ${renderPlanPrice(plan)}
-                    <small>${escapeHtml(plan.fit)}</small>
-                  </label>
-                `
-              )
-              .join("")}
-          </div>
-          <div class="plan-detail" id="plan-detail">
-            ${renderPlanDetail(selectedPlan)}
-          </div>
-        </div>
         <label class="wide">
           Google review link
           <input name="googleReviewLink" value="${escapeHtml(state.business.googleReviewLink)}" placeholder="https://g.page/r/..." />
@@ -2751,7 +2707,7 @@ function renderSettings(isOnboarding = false) {
         </label>
         ${renderTemplateEditorFields()}
         <div class="template-help wide">
-          You do not type every customer name manually. Use <code>{{name}}</code>, <code>{{business}}</code>, <code>{{link}}</code>, and <code>{{offer}}</code>; Vouchly fills them automatically when opening WhatsApp.
+          Use <code>{{name}}</code>, <code>{{business}}</code>, <code>{{link}}</code>, and <code>{{offer}}</code>. Vouchly fills these automatically for every customer.
         </div>
         <label class="terms-check wide">
           <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
@@ -2761,9 +2717,7 @@ function renderSettings(isOnboarding = false) {
           isOnboarding
             ? ""
             : `<div class="workspace-tools wide">
-                <button class="ghost-button" data-action="load-demo" type="button">Load demo data</button>
                 <button class="ghost-button" data-action="export" type="button">Download data backup</button>
-                <button class="danger-button" data-action="reset-workspace" type="button">Reset workspace</button>
               </div>`
         }
         <button class="primary-button" type="submit">${isOnboarding ? "Finish setup" : "Save settings"}</button>
@@ -3049,7 +3003,7 @@ function vouchlyIndustries() {
 function vouchlyMarketingPlan(plan) {
   const isGrowth = plan.id === "growth";
   const displayPrice = plan.price
-    .replace("INR 0 / first month", "₹0 / first month")
+    .replace("Free for 30 days", "Free for 30 days")
     .replace("INR 999 / month", "₹999 / month")
     .replace("INR 2,999 / month", "₹2,999 / month")
     .replace("INR 7,999 / month", "₹7,999 / month");
