@@ -119,11 +119,51 @@ const plans = [
 ];
 
 const messageTypeOptions = [
-  { id: "review", label: "Review request", taskTitle: "Review request", dueTime: "11:00" },
-  { id: "review_reminder", label: "Reminder", taskTitle: "Review reminder", dueTime: "17:00" },
-  { id: "offer", label: "Offer", taskTitle: "Offer follow-up", dueTime: "18:00" },
-  { id: "launch", label: "New launch", taskTitle: "New launch update", dueTime: "18:00" },
-  { id: "festival", label: "Festival sale", taskTitle: "Festival sale update", dueTime: "18:00" }
+  {
+    id: "review",
+    label: "Review request",
+    emoji: "⭐",
+    short: "Ask for a Google review",
+    description: "Best after a sale, visit, or service.",
+    taskTitle: "Review request",
+    dueTime: "11:00"
+  },
+  {
+    id: "review_reminder",
+    label: "Review reminder",
+    emoji: "🔔",
+    short: "Follow up politely",
+    description: "For customers who did not review yet.",
+    taskTitle: "Review reminder",
+    dueTime: "17:00"
+  },
+  {
+    id: "offer",
+    label: "Offer message",
+    emoji: "🏷️",
+    short: "Share a deal",
+    description: "Discounts, sale updates, or limited offers.",
+    taskTitle: "Offer follow-up",
+    dueTime: "18:00"
+  },
+  {
+    id: "launch",
+    label: "New launch",
+    emoji: "✨",
+    short: "Announce something new",
+    description: "New product, service, menu, package, or stock.",
+    taskTitle: "New launch update",
+    dueTime: "18:00"
+  },
+  {
+    id: "festival",
+    label: "Festival sale",
+    emoji: "🎉",
+    short: "Seasonal campaign",
+    description: "Festival deals, holiday offers, and special days.",
+    taskTitle: "Festival sale update",
+    dueTime: "18:00"
+  }
 ];
 
 const defaultState = {
@@ -358,8 +398,8 @@ async function saveRemoteState() {
     syncStatus = "Local only";
     syncMessage = error.message;
   } else {
-    syncStatus = "Cloud synced";
-    syncMessage = `Private workspace for ${session.user.email}`;
+    syncStatus = "Saved";
+    syncMessage = `Your workspace is saved for ${session.user.email}`;
   }
 
   render();
@@ -371,7 +411,7 @@ async function loadRemoteState() {
   }
 
   syncStatus = "Loading";
-  syncMessage = "Loading private workspace...";
+  syncMessage = "Loading your workspace...";
   render();
 
   const { data, error } = await supabase
@@ -406,10 +446,10 @@ async function loadRemoteState() {
       Boolean(planFromLanding);
 
     setState(stateWithPlan, { skipRemote: true });
-    syncStatus = "Cloud synced";
+    syncStatus = "Saved";
     syncMessage = shouldRepairRemote
       ? `Recovered local changes for ${session.user.email}`
-      : `Private workspace for ${session.user.email}`;
+      : `Your workspace is saved for ${session.user.email}`;
     render();
 
     if (shouldRepairRemote) {
@@ -567,6 +607,24 @@ function messageTypeOptionsHtml(selectedPurpose = "review") {
     .join("");
 }
 
+function messageTypeCardsHtml(selectedPurpose = "review") {
+  return `
+    <div class="message-type-grid">
+      ${messageTypeOptions
+        .map(
+          (option) => `
+            <button class="message-type-card ${selectedPurpose === option.id ? "selected" : ""}" data-message-type-card="${escapeHtml(option.id)}" type="button">
+              <span>${escapeHtml(option.emoji)}</span>
+              <strong>${escapeHtml(option.label)}</strong>
+              <small>${escapeHtml(option.short)}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function getRowSelectedPurpose(customerId, fallback = "review") {
   if (!customerId) {
     return fallback;
@@ -621,7 +679,7 @@ async function init() {
       await loadRemoteState();
     } else {
       syncStatus = "Signed out";
-      syncMessage = "Sign in to use cloud sync.";
+      syncMessage = "Sign in to save your workspace.";
       render();
     }
   });
@@ -949,7 +1007,6 @@ function isSetupComplete() {
     state.business.setupComplete &&
       state.business.name?.trim() &&
       state.business.type?.trim() &&
-      state.business.owner?.trim() &&
       state.business.city?.trim() &&
       state.business.googleReviewLink?.trim()
   );
@@ -959,12 +1016,8 @@ function requiredSetupFields(form) {
   return [
     ["Business name", form.name],
     ["Business type", form.type],
-    ["Owner", form.owner],
     ["City", form.city],
-    ["Google review link", form.googleReviewLink],
-    ["Sender name", form.senderName],
-    ["First review request message", form.firstTemplate],
-    ["Reminder message", form.reminderTemplate]
+    ["Google review link", form.googleReviewLink]
   ].filter(([, value]) => !String(value ?? "").trim());
 }
 
@@ -1145,8 +1198,8 @@ function render() {
         </div>
         ${setupComplete ? navButton("dashboard", "Dashboard") : ""}
         ${setupComplete ? navButton("customers", "Customers") : ""}
-        ${setupComplete ? navButton("automations", "Outbox") : ""}
-        ${setupComplete ? navButton("sending", "Guidelines") : ""}
+        ${setupComplete ? navButton("automations", "Messages") : ""}
+        ${setupComplete ? navButton("sending", "How to send") : ""}
         ${setupComplete ? navButton("templates", "Templates") : ""}
         ${navButton("settings", setupComplete ? "Settings" : "Setup")}
         <div class="business-card">
@@ -1261,7 +1314,7 @@ function renderAuth() {
       <section class="marketing-section showcase-section" id="how">
         <p class="eyebrow">How it works</p>
         <h2>Simple enough for any local business owner</h2>
-        <p class="section-sub">No technical setup. If the owner can use WhatsApp, they can understand this workflow.</p>
+        <p class="section-sub">No confusing setup. Add customers, prepare messages, send on WhatsApp.</p>
         <div class="marketing-grid four">
           ${marketingStep("1", "Set up profile", "Add your business name, type, city, and Google review link.")}
           ${marketingStep("2", "Add customers", "Add customers after a sale, visit, appointment, or service.")}
@@ -1371,11 +1424,11 @@ function renderAuth() {
         <div class="auth-trust-panel">
           <span class="brand-mark">V</span>
           <h2>More reviews. More customers. More trust.</h2>
-          <p>Built for local businesses worldwide that want a simple review follow-up system without technical setup.</p>
+          <p>Built for local businesses worldwide that want more reviews without complicated tools.</p>
           <ul>
             <li>No technical knowledge needed</li>
             <li>First month free</li>
-            <li>Private workspace with Supabase login</li>
+            <li>Private saved workspace</li>
             <li>Works on mobile and desktop</li>
           </ul>
         </div>
@@ -1658,7 +1711,7 @@ function renderDashboard() {
       ${metricCard("Customers", state.customers.length, "contacts in workspace")}
       ${metricCard("Review rate", `${completionRate()}%`, "marked reviewed")}
       ${metricCard("Pending", pending, "need review request")}
-      ${metricCard("Outbox", scheduled, "prepared messages")}
+      ${metricCard("Messages", scheduled, "ready to send")}
     </section>
     <section class="split-grid">
       <div class="panel">
@@ -1674,7 +1727,7 @@ function renderDashboard() {
       <div class="panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Outbox</p>
+            <p class="eyebrow">Messages</p>
             <h2>Messages ready to send</h2>
           </div>
           <button class="ghost-button small" data-view="automations">Open</button>
@@ -1711,10 +1764,10 @@ function renderBusinessControlCenter() {
         <button class="ghost-button small" data-view="settings" type="button">Add number</button>
       </article>
       <article>
-        <span>Guidelines</span>
-        <strong>${escapeHtml(isAnyProviderConnected() ? "Auto sender connected" : "Owner sends in WhatsApp")}</strong>
-        <small>${escapeHtml(isAnyProviderConnected() ? "Delivery runs through the connected sender." : "Vouchly prepares messages; owner taps Send in WhatsApp.")}</small>
-        <button class="ghost-button small" data-view="sending" type="button">View guidelines</button>
+        <span>How to send</span>
+        <strong>${escapeHtml(isAnyProviderConnected() ? "Sender connected" : "WhatsApp ready")}</strong>
+        <small>${escapeHtml(isAnyProviderConnected() ? "Messages can go through the connected sender." : "Vouchly fills the message. Owner taps Send.")}</small>
+        <button class="ghost-button small" data-view="sending" type="button">Open</button>
       </article>
     </section>
   `;
@@ -1730,23 +1783,22 @@ function renderAdminSecurity() {
   return `
     <section class="setup-hero security-hero">
       <p class="eyebrow">Admin & Security</p>
-      <h2>Private workspace, safer sending, backend-only secrets</h2>
+      <h2>Private workspace and safe sending</h2>
       <p>
-        This page shows what is protected today and what must stay behind a backend when we add Razorpay,
-        WhatsApp API, SMS, or email automation.
+        This page keeps the important safety checks in one place.
       </p>
     </section>
 
     <section class="admin-security-grid">
       ${adminControlCard("Current plan", plan.name, `${usage.customers}/${usage.customerLimit} customers and ${usage.requests}/${usage.requestLimit} prepared requests used.`, "Open billing", "open-billing", plan.id === "free" ? "starter" : plan.id)}
       ${adminControlCard("Owner WhatsApp", ownerNumber ? `+${ownerNumber}` : "Not added", "Used only for the owner-send workflow. Vouchly does not expose this publicly.", "Edit number", "", "", "settings")}
-      ${adminControlCard("Sending mode", providersConnected.length ? "Provider connected" : "Owner taps Send", providersConnected.length ? "Automatic delivery can run through the connected provider." : "Messages are prepared and opened in WhatsApp. Owner sends from their own number.", "View sending", "", "", "sending")}
+      ${adminControlCard("Sending mode", providersConnected.length ? "Sender connected" : "Owner taps Send", providersConnected.length ? "Messages can go through the connected sender." : "Messages open in WhatsApp. Owner sends from their own number.", "How to send", "", "", "sending")}
     </section>
 
     <section class="panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Security wall</p>
+          <p class="eyebrow">Security</p>
           <h2>What is protected right now</h2>
         </div>
       </div>
@@ -1763,13 +1815,13 @@ function renderAdminSecurity() {
     <section class="panel backend-wall-panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Backend-only rules</p>
-          <h2>What must not be stored in app.js</h2>
+          <p class="eyebrow">Protected keys</p>
+          <h2>Keep payment and sender keys private</h2>
         </div>
       </div>
       <div class="backend-wall-grid">
         ${backendWallStep("Razorpay", "Payment links, order creation, webhook verification, and plan activation must run from a backend or Supabase Edge Function.")}
-        ${backendWallStep("WhatsApp API", "Interakt, WATI, AiSensy, or Meta API tokens must be stored server-side only, never in browser code.")}
+        ${backendWallStep("WhatsApp sender", "Interakt, WATI, AiSensy, or Meta keys must stay private and should never be pasted into public app code.")}
         ${backendWallStep("Admin logs", "Future audit logs should record plan changes, exports, deletions, and provider actions without exposing private tokens.")}
       </div>
     </section>
@@ -1784,7 +1836,7 @@ function renderAdminSecurity() {
       <div class="security-actions">
         <button class="ghost-button" data-action="export" type="button">Download data backup</button>
         <button class="ghost-button" data-view="settings" type="button">Privacy settings</button>
-        <button class="ghost-button" data-view="sending" type="button">Sending setup</button>
+        <button class="ghost-button" data-view="sending" type="button">How to send</button>
         <button class="danger-button" data-action="reset-workspace" type="button">Reset workspace</button>
       </div>
     </section>
@@ -1870,7 +1922,7 @@ function renderSendingModeBanner() {
         <strong>${escapeHtml(getSendingModeLabel())}</strong>
         <span>${escapeHtml(getSendingModeDetail())}</span>
       </div>
-      <button class="ghost-button small" data-view="sending" type="button">View sending setup</button>
+      <button class="ghost-button small" data-view="sending" type="button">How to send</button>
     </section>
   `;
 }
@@ -1879,9 +1931,9 @@ function renderDashboardQuickActions(pending, scheduled) {
   return `
     <section class="quick-actions">
       ${quickActionCard("Add customer", "Add a new customer after a sale, visit, or service.", "customers", "")}
-      ${quickActionCard("Prepare messages", `${pending} pending customer${pending === 1 ? "" : "s"} can be prepared with auto-filled names.`, "", "bulk-send")}
-      ${quickActionCard("Outbox", `${scheduled} prepared message${scheduled === 1 ? "" : "s"} ready for WhatsApp.`, "automations", "")}
-      ${quickActionCard("Sending setup", getSendingModeLabel(), "sending", "")}
+      ${quickActionCard("Prepare messages", `${pending} customer${pending === 1 ? "" : "s"} waiting for a message.`, "", "bulk-send")}
+      ${quickActionCard("Messages", `${scheduled} message${scheduled === 1 ? "" : "s"} ready to send.`, "automations", "")}
+      ${quickActionCard("How to send", getSendingModeLabel(), "sending", "")}
     </section>
   `;
 }
@@ -1966,15 +2018,15 @@ function renderCustomers() {
         </span>
         <button class="ghost-button small" data-action="clear-customer-filters" type="button">Clear filters</button>
       </div>
-      <div class="campaign-toolbar">
-        <div>
-          <strong>Prepare messages for this list</strong>
-          <span>Vouchly fills customer names and your saved link automatically.</span>
+      <div class="message-type-panel">
+        <div class="message-type-head">
+          <div>
+            <strong>Choose message type</strong>
+            <span>Vouchly fills name, business, review link, and offer text automatically.</span>
+          </div>
+          <button class="primary-button small" data-action="bulk-send" type="button">Prepare visible customers</button>
         </div>
-        <select data-bulk-purpose>
-          ${messageTypeOptionsHtml(bulkCampaignPurpose)}
-        </select>
-        <button class="primary-button small" data-action="bulk-send" type="button">Prepare selected type</button>
+        ${messageTypeCardsHtml(bulkCampaignPurpose)}
       </div>
       ${customerRows(visibleCustomers, startIndex)}
       ${customerPagination(currentPage, totalPages, filteredCustomers.length)}
@@ -2076,16 +2128,16 @@ function customerRows(customers, startIndex = 0) {
                   <td><span class="status ${escapeHtml(customer.status)}">${escapeHtml(formatCustomerStatus(customer.status))}</span></td>
                   <td class="row-actions">
                     <select class="row-purpose-select" data-row-purpose="${customer.id}" aria-label="Message type for ${escapeHtml(customer.name)}">
-                      ${messageTypeOptionsHtml("review")}
+                      ${messageTypeOptionsHtml(bulkCampaignPurpose)}
                     </select>
                     <button class="ghost-button small" data-action="preview-message" data-id="${customer.id}">Preview</button>
-                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}">Open WhatsApp</button>
+                    <button class="whatsapp-button small" data-action="open-whatsapp-message" data-id="${customer.id}">WhatsApp</button>
                     <button class="ghost-button small" data-action="edit-customer" data-id="${customer.id}">Edit</button>
                     ${
                       customer.status === "reviewed"
                         ? `<span class="row-note">Reviewed</span>`
-                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}" data-purpose="review_reminder">Remind later</button>
-                           <button class="primary-button small" data-action="mark-reviewed" data-id="${customer.id}">Mark reviewed</button>`
+                        : `<button class="ghost-button small" data-action="queue" data-id="${customer.id}" data-purpose="review_reminder">Later</button>
+                           <button class="primary-button small" data-action="mark-reviewed" data-id="${customer.id}">Reviewed</button>`
                     }
                     <button class="danger-button small" data-action="delete-customer" data-id="${customer.id}">Delete</button>
                   </td>
@@ -2213,8 +2265,6 @@ function renderCustomerEditor() {
 }
 
 function renderAutomations() {
-  const readyTasks = state.tasks.filter((task) => task.status !== "done");
-  const sentTasks = state.tasks.filter((task) => task.status === "done");
   const filteredTasks = filterOutboxTasks(state.tasks);
   const readyFilteredTasks = filteredTasks.filter((task) => task.status !== "done");
   const sentFilteredTasks = filteredTasks.filter((task) => task.status === "done");
@@ -2223,24 +2273,19 @@ function renderAutomations() {
     <section class="panel outbox-panel">
       <div class="panel-head">
         <div>
-          <p class="eyebrow">Outbox</p>
-          <h2>Messages prepared for owner sending</h2>
+          <p class="eyebrow">Messages</p>
+          <h2>Prepared WhatsApp messages</h2>
         </div>
       </div>
       <div class="list-note">
-        Vouchly prepares each message with the saved customer name and review link. It does not auto-send yet. At the prepared time, open WhatsApp, check the message, tap Send from the business number, then mark it sent here.
-      </div>
-      <div class="outbox-summary">
-        ${outboxStat("Ready", readyTasks.length, "prepared, not auto-sent")}
-        ${outboxStat("Sent", sentTasks.length, "marked sent manually")}
-        ${outboxStat("Total", state.tasks.length, "prepared messages")}
+        Open WhatsApp, check the filled message, tap Send, then mark it sent.
       </div>
       <div class="outbox-toolbar">
-        <input data-outbox-filter="query" value="${escapeHtml(outboxFilters.query)}" placeholder="Search customer or task..." />
+        <input data-outbox-filter="query" value="${escapeHtml(outboxFilters.query)}" placeholder="Search customer..." />
         <select data-outbox-filter="status">
-          <option value="ready" ${outboxFilters.status === "ready" ? "selected" : ""}>Ready to send</option>
-          <option value="sent" ${outboxFilters.status === "sent" ? "selected" : ""}>Sent history</option>
-          <option value="all" ${outboxFilters.status === "all" ? "selected" : ""}>All messages</option>
+          <option value="ready" ${outboxFilters.status === "ready" ? "selected" : ""}>To send</option>
+          <option value="sent" ${outboxFilters.status === "sent" ? "selected" : ""}>Sent</option>
+          <option value="all" ${outboxFilters.status === "all" ? "selected" : ""}>All</option>
         </select>
         <select data-outbox-filter="channel">
           <option value="all" ${outboxFilters.channel === "all" ? "selected" : ""}>All channels</option>
@@ -2260,18 +2305,18 @@ function renderAutomations() {
           value="${escapeHtml(outboxFilters.selectedDate)}"
           ${outboxFilters.dateMode === "custom" ? "" : "disabled"}
         />
-        <button class="ghost-button small" data-action="clear-outbox-filters" type="button">Clear filters</button>
+        <button class="ghost-button small" data-action="clear-outbox-filters" type="button">Clear</button>
       </div>
       <div class="result-count">
-        Showing ${filteredTasks.length} of ${state.tasks.length} prepared messages
+        ${filteredTasks.length} message${filteredTasks.length === 1 ? "" : "s"} found
       </div>
       <div class="outbox-section">
-        <h3>Ready to send</h3>
-        ${taskRows(readyFilteredTasks, "No ready messages match this view.")}
+        <h3>To send</h3>
+        ${taskRows(readyFilteredTasks, "No messages to send in this view.")}
       </div>
       <div class="outbox-section">
-        <h3>Sent history</h3>
-        ${taskRows(sentFilteredTasks.slice(0, 20), "No sent messages match this view.")}
+        <h3>Sent</h3>
+        ${taskRows(sentFilteredTasks.slice(0, 20), "No sent messages in this view.")}
       </div>
     </section>
   `;
@@ -2302,106 +2347,38 @@ function filterOutboxTasks(tasks) {
   });
 }
 
-function outboxStat(label, value, detail) {
-  return `
-    <article class="outbox-stat">
-      <strong>${escapeHtml(value)}</strong>
-      <span>${escapeHtml(label)}</span>
-      <small>${escapeHtml(detail)}</small>
-    </article>
-  `;
-}
-
 function renderSending() {
   const ownerNumber = normalizePhoneForWhatsApp(state.business.ownerWhatsApp);
 
   return `
-    <section class="setup-hero sending-hero">
-      <p class="eyebrow">Guidelines</p>
-      <h2>Ready-to-send WhatsApp messages, using the owner's number</h2>
-      <p>
-        Vouchly creates the message from saved customer data, adds the review link or offer,
-        and opens WhatsApp with everything filled. The owner only checks it and taps Send.
-      </p>
-    </section>
-    <section class="manual-mode-panel">
-      <div>
-        <p class="eyebrow">Current mode</p>
-        <h2>Works today without technical setup</h2>
-        <p>
-          This is the safest launch flow for small businesses: add customers, click Send on WhatsApp,
-          and send from the owner's real WhatsApp number. Full automatic sending can be connected later
-          with a WhatsApp provider when the business is ready.
-        </p>
-      </div>
-      <ol>
-        <li><strong>1</strong><span>Add customers with phone numbers.</span></li>
-        <li><strong>2</strong><span>Vouchly fills name, business, link, and campaign text.</span></li>
-        <li><strong>3</strong><span>WhatsApp opens; owner taps Send.</span></li>
-      </ol>
+    <section class="setup-hero sending-hero simple-guide-hero">
+      <p class="eyebrow">How to send</p>
+      <h2>No typing names manually</h2>
+      <p>Choose a message type. Vouchly fills the customer name, business name, and link. Owner taps Send in WhatsApp.</p>
     </section>
     <section class="owner-whatsapp-panel">
       <div>
-        <p class="eyebrow">Owner number</p>
-        <h2>${ownerNumber ? `+${ownerNumber}` : "Add the owner's WhatsApp number"}</h2>
-        <p>Shop owners do not need technical knowledge. They add their WhatsApp number once, then Vouchly opens each customer message with the right details filled.</p>
+        <p class="eyebrow">Owner WhatsApp</p>
+        <h2>${ownerNumber ? `+${ownerNumber}` : "Add WhatsApp number"}</h2>
+        <p>Customers see messages from this WhatsApp number.</p>
       </div>
-      <button class="primary-button" data-view="settings" type="button">${ownerNumber ? "Edit number" : "Add in settings"}</button>
+      <button class="primary-button" data-view="settings" type="button">${ownerNumber ? "Edit number" : "Add number"}</button>
     </section>
-    <section class="sending-readiness">
-      ${readinessItem("1", "Business profile", isSetupComplete(), "Complete business name, city, sender name, and Google review link.")}
-      ${readinessItem("2", "Message templates", reviewTemplatesHaveLinks(), "Keep review link placeholder in request and reminder templates. Offer and launch templates can use offer text instead.")}
-      ${readinessItem("3", "Customer permission", Boolean(state.business.acceptedTermsAt), "Owner confirms they will only message real customers who agreed to be contacted.")}
-      ${readinessItem("4", "Owner WhatsApp", Boolean(ownerNumber), "Use Send on WhatsApp on each customer to send from the owner's own number.")}
-    </section>
-    <section class="manual-send-grid">
-      ${manualSendCard("1", "Names auto-fill", "Add the customer once. {{name}} becomes Priya, Rahul, or that exact customer automatically.")}
-      ${manualSendCard("2", "Send on WhatsApp", "Click Send on WhatsApp on a customer row. Vouchly opens WhatsApp with the message ready.")}
-      ${manualSendCard("3", "Campaign follow-ups", "Use templates for reviews, offers, sale reminders, new product launches, festival deals, or service reminders.")}
-      ${manualSendCard("4", "Prepare safely", "Prepare many reminders at once, then send them one-by-one from WhatsApp so the number stays safer.")}
-    </section>
-    <section class="campaign-use-panel">
-      <div>
-        <p class="eyebrow">Campaigns</p>
-        <h2>Use Vouchly for more than review requests</h2>
-        <p>
-          Owners can prepare customer-wise WhatsApp messages for offers, new stock, festival deals,
-          service reminders, and review follow-ups. Vouchly fills the customer name automatically.
-        </p>
-      </div>
-      <div class="campaign-use-grid">
-        ${campaignUseCard("Review", "Ask happy customers for a Google review after a purchase or visit.")}
-        ${campaignUseCard("Offer", "Send a saved offer like discount, new stock, or limited-time deal.")}
-        ${campaignUseCard("Launch", "Announce a new product, treatment, service, menu item, or package.")}
-        ${campaignUseCard("Reminder", "Follow up with customers who did not reply or review yet.")}
-      </div>
-    </section>
-    <section class="panel backend-wall-panel">
-      <div class="panel-head">
+    <section class="message-type-panel">
+      <div class="message-type-head">
         <div>
-          <p class="eyebrow">Automatic sending later</p>
-          <h2>Real automation will run through a secure backend</h2>
+          <strong>Choose what to send</strong>
+          <span>Review, reminder, offer, new launch, or festival sale.</span>
         </div>
+        <button class="primary-button small" data-view="customers" type="button">Customers</button>
       </div>
-      <div class="backend-wall-grid">
-        ${backendWallStep("Today", "Owner clicks Send on WhatsApp. The customer's name and message are auto-filled from Vouchly data.")}
-        ${backendWallStep("Provider phase", "When Interakt, WATI, AiSensy, or Meta is connected, Vouchly can trigger approved templates automatically.")}
-        ${backendWallStep("Security rule", "Provider API tokens stay in backend or Edge Functions only, never inside the static website.")}
-      </div>
+      ${messageTypeCardsHtml(bulkCampaignPurpose)}
     </section>
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <p class="eyebrow">Simple workflow</p>
-          <h2>What happens after clicking each action?</h2>
-        </div>
-      </div>
-      <div class="workflow-list">
-        ${workflowStep("1", "Choose message type", "Pick Review request, Reminder, Offer, New launch, or Festival sale from the customer row or bulk toolbar.")}
-        ${workflowStep("2", "Preview / Open WhatsApp", "Vouchly fills the customer name, business name, and saved link. Owner checks it, then opens WhatsApp.")}
-        ${workflowStep("3", "Remind later", "Creates a prepared reminder for the right time. It appears in Follow-ups; owner opens WhatsApp and sends it manually.")}
-        ${workflowStep("4", "Mark sent", "After the owner sends the message or finishes the follow-up, mark it sent for tracking.")}
-      </div>
+    <section class="manual-send-grid compact">
+      ${manualSendCard("1", "Add customer", "Save name and phone.")}
+      ${manualSendCard("2", "Pick message", "Choose review, reminder, offer, launch, or festival.")}
+      ${manualSendCard("3", "Open WhatsApp", "Message opens already filled.")}
+      ${manualSendCard("4", "Tap Send", "Owner sends from their WhatsApp.")}
     </section>
   `;
 }
@@ -2420,15 +2397,6 @@ function manualSendCard(number, title, body) {
         <h3>${escapeHtml(title)}</h3>
         <p>${escapeHtml(body)}</p>
       </div>
-    </article>
-  `;
-}
-
-function campaignUseCard(title, body) {
-  return `
-    <article class="campaign-use-card">
-      <strong>${escapeHtml(title)}</strong>
-      <span>${escapeHtml(body)}</span>
     </article>
   `;
 }
@@ -2705,10 +2673,14 @@ function renderSettings(isOnboarding = false) {
           <input name="offerText" value="${escapeHtml(state.business.offerText ?? "")}" placeholder="Example: 10% off this week, new stock arrived, free consultation..." />
           <small>Used automatically in offer, new launch, and festival follow-up messages through <code>{{offer}}</code>.</small>
         </label>
-        ${renderTemplateEditorFields()}
-        <div class="template-help wide">
-          Use <code>{{name}}</code>, <code>{{business}}</code>, <code>{{link}}</code>, and <code>{{offer}}</code>. Vouchly fills these automatically for every customer.
-        </div>
+        <details class="advanced-settings wide">
+          <summary>Edit message templates</summary>
+          <p>Optional. Vouchly already has ready messages. Open this only if you want your own words.</p>
+          ${renderTemplateEditorFields()}
+          <div class="template-help wide">
+            Use <code>{{name}}</code>, <code>{{business}}</code>, <code>{{link}}</code>, and <code>{{offer}}</code>. Vouchly fills these automatically for every customer.
+          </div>
+        </details>
         <label class="terms-check wide">
           <input name="acceptTerms" type="checkbox" ${state.business.acceptedTermsAt ? "checked" : ""} />
           <span>I agree to Vouchly's Terms, Privacy rules, anti-spam policy, and honest-review policy. I will only message customers who gave their contact details or have a real business relationship with me.</span>
@@ -2863,11 +2835,11 @@ function renderVouchlyLandingAuth() {
         <div class="auth-trust-panel">
           <span class="brand-mark">⭐</span>
           <h2>More reviews. More customers. More trust.</h2>
-          <p>Built for local businesses worldwide that want a simple review follow-up system without technical setup.</p>
+          <p>Built for local businesses worldwide that want more reviews without complicated tools.</p>
           <ul>
             <li>No technical knowledge needed</li>
             <li>First month free</li>
-            <li>Private workspace with Supabase login</li>
+            <li>Private saved workspace</li>
             <li>Works on mobile and desktop</li>
           </ul>
         </div>
@@ -3235,6 +3207,12 @@ function bindEvents() {
   document.querySelector("[data-bulk-purpose]")?.addEventListener("change", (event) => {
     bulkCampaignPurpose = event.currentTarget.value;
     render();
+  });
+  document.querySelectorAll("[data-message-type-card]").forEach((button) => {
+    button.addEventListener("click", () => {
+      bulkCampaignPurpose = button.dataset.messageTypeCard || "review";
+      render();
+    });
   });
   document.querySelectorAll('input[name="plan"]').forEach((input) => {
     input.addEventListener("change", () => {
@@ -3678,7 +3656,7 @@ async function openTaskWhatsApp(taskId) {
   const customer = task ? findCustomerForTask(task) : null;
 
   if (!task || !customer) {
-    appMessage = "Customer not found for this outbox item. Prepare the message again from Customers.";
+    appMessage = "Customer not found for this message. Prepare it again from Customers.";
     render();
     return;
   }
@@ -3862,7 +3840,7 @@ async function logout() {
   authMessage = "";
   appMessage = "";
   syncStatus = "Signed out";
-  syncMessage = "Sign in to use cloud sync.";
+  syncMessage = "Sign in to save your workspace.";
   render();
 
   await supabase.auth.signOut();

@@ -41,3 +41,23 @@ on vouchly_workspaces for delete
 using (auth.uid() = user_id);
 
 drop policy if exists "users write own vouchly workspace" on vouchly_workspaces;
+
+drop trigger if exists set_vouchly_workspace_updated_at on vouchly_workspaces;
+drop function if exists update_vouchly_workspace_updated_at();
+
+create function update_vouchly_workspace_updated_at()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger set_vouchly_workspace_updated_at
+before update on vouchly_workspaces
+for each row
+execute function update_vouchly_workspace_updated_at();
